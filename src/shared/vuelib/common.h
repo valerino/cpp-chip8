@@ -7,6 +7,4 @@
 
 #define EXPORT __attribute__((visibility("default")))
 
-#define SAFE_DELETE(__x__) if (__x__) { delete __x__; __x__=NULL; }
-
-#endif //PROJECT_COMMON_H
+#endif // PROJECT_COMMON_H

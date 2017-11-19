@@ -1,0 +1,6 @@
+[submodule "src/shared/vuelib/json"]
+	path = src/shared/vuelib/json
+	url = https://github.com/nlohmann/json
+[submodule "src/shared/vuelib/tinydir"]
+	path = src/shared/vuelib/tinydir
+	url = https://github.com/cxong/tinydir

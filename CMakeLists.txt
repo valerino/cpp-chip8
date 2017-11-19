@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(BASE_DIR ${CMAKE_SOURCE_DIR}/bin)
 set(SHARED_SRC_DIR ${CMAKE_SOURCE_DIR}/src/shared)
 set(VUELIB_SRC_DIR ${SHARED_SRC_DIR}/vuelib)
-set(PLUGINS_DIR ${BASE_DIR}/plugins)
 set(EMULATORS_DIR ${BASE_DIR}/emulators)
 
 # sdl
@@ -26,4 +25,4 @@ link_directories (${SDL_LIB_PATH} ${VUELIB_SRC_DIR})
 # projects
 add_subdirectory(src/shared)
 add_subdirectory(src/core)
-add_subdirectory(src/plugins)
+add_subdirectory(src/emulators)

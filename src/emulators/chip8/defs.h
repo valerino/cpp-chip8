@@ -10,5 +10,6 @@
  */
 #define MODE_CHIP8 0
 #define MODE_SUPER_CHIP8 1
+#define MODE_ETI660 2
 
-#endif //PROJECT_DEFS_H
+#endif // PROJECT_DEFS_H

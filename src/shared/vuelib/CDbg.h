@@ -27,7 +27,7 @@ private:
    * @param format format string
    * @param args variadic
    */
-  static void print(int level, const char* format, va_list args);
+  static void print(int level, const char *format, va_list args);
 
   /**
    * the default debug level
@@ -46,28 +46,28 @@ public:
    * @param format format string
    * @param ... variadic
    */
-  static void error(const char* format, ...);
+  static void error(const char *format, ...);
 
   /**
    * prints a warning message
    * @param format format string
    * @param ... variadic
    */
-  static void warning(const char* format, ...);
+  static void warning(const char *format, ...);
 
   /**
    * prints a verbose message
    * @param format format string
    * @param ... variadic
    */
-  static void verbose(const char* format, ...);
+  static void verbose(const char *format, ...);
 
   /**
    * prints a notify message
    * @param format format string
    * @param ... variadic
    */
-  static void notify(const char* format, ...);
+  static void notify(const char *format, ...);
 };
 
-#endif //PROJECT_CDBG_H
+#endif // PROJECT_CDBG_H

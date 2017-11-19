@@ -7,7 +7,7 @@
 
 int CDbg::m_level = DBG_VERBOSE;
 
-void CDbg::print(int level, const char* format, va_list args) {
+void CDbg::print(int level, const char *format, va_list args) {
   if (level < m_level) {
     return;
   }
@@ -28,30 +28,29 @@ void CDbg::print(int level, const char* format, va_list args) {
   fprintf(stderr, "[.] %s: %s\n", type, buf);
 }
 
-void CDbg::error(const char* format, ...) {
+void CDbg::error(const char *format, ...) {
   va_list args;
-  va_start(args, format );
+  va_start(args, format);
   CDbg::print(DBG_ERROR, format, args);
   va_end(args);
 }
 
-void CDbg::warning(const char* format, ...) {
+void CDbg::warning(const char *format, ...) {
   va_list args;
-  va_start(args, format );
+  va_start(args, format);
   CDbg::print(DBG_WARNING, format, args);
   va_end(args);
 }
 
-void CDbg::verbose(const char* format, ...) {
+void CDbg::verbose(const char *format, ...) {
   va_list args;
-  va_start(args, format );
+  va_start(args, format);
   CDbg::print(DBG_VERBOSE, format, args);
   va_end(args);
-
 }
-void CDbg::notify(const  char* format, ...) {
+void CDbg::notify(const char *format, ...) {
   va_list args;
-  va_start(args, format );
+  va_start(args, format);
   CDbg::print(DBG_NOTIFY, format, args);
   va_end(args);
 }

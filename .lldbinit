@@ -1,0 +1,2 @@
+​type format add –format hex "uint8_t"
+​type format add –format hex "uint16_t"
