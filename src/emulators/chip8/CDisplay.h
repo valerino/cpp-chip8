@@ -6,9 +6,7 @@
 #define PROJECT_CDISPLAY_H
 
 #include "CMemory.h"
-
-// the default display scale factor
-#define DEFAULT_SCALE_FACTOR 10.0
+#include <CConfiguration.h>
 
 /**
  * implements the display subsystem
@@ -17,10 +15,10 @@ class CDisplay {
 public:
   /**
    * initializes the display
-   * @param mode MODE_CHIP8, MODE_SUPERCHIP8, MODE_ETI660
+   * @param cfg the configuration instance
    * @param mem represents emulated memory
    */
-  CDisplay(int mode, CMemory *mem);
+  CDisplay(CConfiguration *cfg, CMemory *mem);
   ~CDisplay();
 
   /**
@@ -78,17 +76,17 @@ public:
 
   /**
    * dynamically set mode via the HIGH/LOW instruction from the cpu
-   * @param mode MODE_CHIP MODE_SUPERCHIP8
+   * @param mode "chip8","sc8","eti660"
    */
-  void set_mode(int mode);
+  void set_mode(const char *mode);
 
 private:
-  CMemory *m_mem;
-  int m_mode;
+  CConfiguration *m_cfg;
   int m_width;
   int m_height;
   SDL_Renderer *m_renderer;
   SDL_Window *m_window;
+  CMemory *m_mem;
   std::array<bool, 64 * 128> m_videomem;
 };
 

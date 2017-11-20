@@ -29,7 +29,7 @@ public:
   static const void *to_buffer(const char *path, uint32_t *size = 0);
 
   /**
-   * wraps tinydir opendir, returns the tinydir object
+   * wraps tinydir_opendir(), returns the tinydir object (refer to tinydir/tinydir.h)
    * call close_directory() when done
    * @param path path to the directory to open
    * @return tinydir_dir*

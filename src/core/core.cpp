@@ -2,72 +2,97 @@
 #include <dlfcn.h>
 
 /**
+ * print banner
+ */
+void banner() {
+  CUIUtils::show_message(MSG_INFO, "VUE - valerino's universal emulator\n"
+                                   "(c)opyleft, 2k17\n\n");
+}
+
+/**
  * print usage
  */
 void usage(char **argv) {
-  printf("[.] vue : valerino universal emulator\n");
-  printf("[.] (c)opyleft, 2k17\n");
-  printf("usage: %s -e <emu_core> -o [core_options] -r <image>\n",argv[0]);
-  printf("usage: %s -l to list available cores\n",argv[0]);
+  banner();
+  CUIUtils::show_message(
+      MSG_INFO,
+      "\tusage: %s -e <emu_core> -o [core_options] -r <image>\n"
+      "\tusage: %s -l to list available cores\n",
+      argv[0], argv[0]);
 }
 
+/**
+ * load emulator
+ * @param name the core name
+ * @param emu on successfule return, pointer to the IEmulator interface
+ * @return
+ */
+CDynModule *load_emu(const char *name, IEmulator **emu) {
+  char emu_path[260];
+  snprintf(emu_path, sizeof(emu_path), "./emulators/%s/lib%s", name, name);
+  *emu = NULL;
+  CDynModule *mod = NULL;
+  try {
+    mod = new CDynModule(emu_path);
+    IEmulator *e = (IEmulator *)mod->getIEmulator();
+    if (!e) {
+      CUIUtils::show_message(MSG_ERROR, "%s is not a VUE core: %s\n", emu_path);
+      delete mod;
+      mod = NULL;
+    }
+
+    // loaded
+    *emu = e;
+  } catch (std::system_error ex) {
+    CUIUtils::show_message(MSG_ERROR, "cannot load module: %s (%d)\n", emu_path,
+                           ex.code());
+  }
+  return mod;
+}
 /**
  * walk emulators directory and list cores
  * @return 0 on success
  */
 int list_cores() {
+  banner();
   // open directory
-  tinydir_dir* d = CFile::open_directory("./emulators");
+  tinydir_dir *d = CFile::open_directory("./emulators");
   if (!d) {
-    int e = errno;
     return errno;
   }
 
   // walk directory
+  std::string cores("available cores:\n");
   while (d->has_next) {
     tinydir_file file;
     tinydir_readfile(d, &file);
     if (file.is_dir) {
-      if ((strcmp(file.name,".") == 0) || (strcmp(file.name,"..") == 0)) {
+      if ((strcmp(file.name, ".") == 0) || (strcmp(file.name, "..") == 0)) {
         // skip these
         tinydir_next(d);
         continue;
       }
-      // found an emulator dir
-      char path[260];
-#if defined(TARGET_OS_MAC) || defined(TARGET_OS_IOS)
-      sprintf(path,"./emulators/%s/lib%s.dylib",file.name, file.name);
-#elif TARGET_OS_UNIX
-      // add others....
-      sprintf(path,"./emulators/%s/lib%s.so",file.name, file.name);
-#elif TARGET_OS_WIN32
-      sprintf(path,"./emulators/%s/lib%s.dll",file.name, file.name);
-#endif
 
-      // load library and call the info functions
-#ifdef WIN32
-      HANDLE* emu = LoadLibraryA(path);
-      GET_EMULATOR_INTERFACE p =
-          (GET_EMULATOR_INTERFACE)GetProcAddress(emu, "get_emulator_interface");
-#else
-      void *emu = dlopen(path, RTLD_LAZY);
-      GET_EMULATOR_INTERFACE p =
-          (GET_EMULATOR_INTERFACE)dlsym(emu, "get_emulator_interface");
-#endif
-      // instantiate emulator
-      IEmulator *e = (IEmulator *)p();
-      printf("[.] core: %s, info: %s, version: %s, options: %s\n", e->name().data(), e->info().data(), e->version().data(), e->options().data());
-
-#ifdef WIN32
-      FreeLibrary(emu);
-#else
-      dlclose(emu);
-#endif
+      // found an emulator dir, load emulator and get info
+      IEmulator *e;
+      CDynModule *emu = load_emu(file.name, &e);
+      if (e) {
+        char buffer[1024];
+        snprintf(
+            buffer, sizeof(buffer),
+            "\tcore: %s\n \t\tinfo: %s\n\t\tversion: %s\n\t\toptions: %s\n",
+            e->name().data(), e->info().data(), e->version().data(),
+            e->options().data());
+        cores += buffer;
+        delete emu;
+      }
     }
 
+    // next
     tinydir_next(d);
   }
   CFile::close_directory(d);
+  CUIUtils::show_message(MSG_INFO, cores.data());
   return 0;
 }
 
@@ -114,23 +139,22 @@ int main(int argc, char **argv) {
   }
 
   // load configuration
+  // TODO: implement configuration options
   CConfiguration cfg("core.json");
   cfg.read("{}");
 
   // load emulator library
-  void *emu = dlopen("emulators/chip8/libchip8.dylib", RTLD_LAZY);
-  GET_EMULATOR_INTERFACE p =
-      (GET_EMULATOR_INTERFACE)dlsym(emu, "get_emulator_interface");
+  CUIUtils::show_toast_message(MSG_INFO, "loading emulator core: %s\n",
+                               emu_core);
+  IEmulator *emu;
+  CDynModule *mod = load_emu(emu_core, &emu);
+  if (emu && mod) {
+    // will run until quitting
+    int res = emu->start(game_rom);
+    delete emu;
+    delete mod;
+    return res;
+  }
 
-  // instantiate emulator
-  IEmulator *chip8 = (IEmulator *)p();
-  CDbg::notify("running emulator: %s\n", chip8->name().c_str());
-
-  // start emulator with invaders rom
-  chip8->start("emulators/chip8/invaders.ch8");
-
-  // done, exit
-  chip8->stop();
-  delete chip8;
-  return 0;
+  return 1;
 }

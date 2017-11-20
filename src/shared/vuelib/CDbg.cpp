@@ -25,10 +25,14 @@ void CDbg::print(int level, const char *format, va_list args) {
   vsnprintf(buf, sizeof(buf), format, args);
 
   // print
-  fprintf(stderr, "[.] %s: %s\n", type, buf);
+  fprintf(stderr, "[D] %s: %s\n", type, buf);
 }
 
 void CDbg::error(const char *format, ...) {
+  if (m_level > DBG_ERROR) {
+    return;
+  }
+
   va_list args;
   va_start(args, format);
   CDbg::print(DBG_ERROR, format, args);
@@ -36,6 +40,9 @@ void CDbg::error(const char *format, ...) {
 }
 
 void CDbg::warning(const char *format, ...) {
+  if (m_level > DBG_WARNING) {
+    return;
+  }
   va_list args;
   va_start(args, format);
   CDbg::print(DBG_WARNING, format, args);
@@ -43,12 +50,19 @@ void CDbg::warning(const char *format, ...) {
 }
 
 void CDbg::verbose(const char *format, ...) {
+  if (m_level > DBG_VERBOSE) {
+    return;
+  }
   va_list args;
   va_start(args, format);
   CDbg::print(DBG_VERBOSE, format, args);
   va_end(args);
 }
+
 void CDbg::notify(const char *format, ...) {
+  if (m_level > DBG_NOTIFY) {
+    return;
+  }
   va_list args;
   va_start(args, format);
   CDbg::print(DBG_NOTIFY, format, args);

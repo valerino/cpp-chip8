@@ -4,27 +4,31 @@
 
 #include <vuelib.h>
 #include "CDisplay.h"
-#include "CGfx.h"
-
-#include "defs.h"
 
 /**
  * convert screen coordinates to flat buffer offset
  */
 #define SCREEN_TO_FLAT_OFFSET(__x__, __y__, __w__) ((__y__ * __w__) + __x__)
 
-CDisplay::CDisplay(int mode, CMemory *mem)
-    : m_mode{mode}, m_mem{mem}, m_height{32}, m_width{64}, m_videomem{} {
-  if (m_mode == MODE_SUPER_CHIP8) {
+CDisplay::CDisplay(CConfiguration *cfg, CMemory *mem)
+    : m_cfg{cfg}, m_mem{mem}, m_height{32}, m_width{64}, m_videomem{} {
+
+  if (m_cfg->get<std::string>("mode") == "sc8") {
+    // super chip 8
     m_height = 64;
     m_width = 128;
   }
 
   // create window
+  uint32_t flags = 0;
+  if (m_cfg->get<bool>("fullscreen")) {
+    flags = SDL_WINDOW_FULLSCREEN;
+  }
+
+  double scale = m_cfg->get<double>("scale");
   m_window =
       SDL_CreateWindow("Chip8", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                       m_width * DEFAULT_SCALE_FACTOR,
-                       m_height * DEFAULT_SCALE_FACTOR, SDL_WINDOW_SHOWN);
+                       m_width * scale, m_height * scale, flags|SDL_WINDOW_OPENGL);
   if (!m_window) {
     CDbg::error(SDL_GetError());
     return;
@@ -33,14 +37,13 @@ CDisplay::CDisplay(int mode, CMemory *mem)
   // get the default renderer
   m_renderer = SDL_CreateRenderer(m_window, -1, 0);
 
-  // adjust the scaling factor
-  SDL_RenderSetScale(m_renderer, DEFAULT_SCALE_FACTOR, DEFAULT_SCALE_FACTOR);
+  // scale output
+  SDL_RenderSetScale(m_renderer, scale, scale);
 
   // clear and show window
   SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 0);
   SDL_RenderClear(m_renderer);
   SDL_RenderPresent(m_renderer);
-  SDL_RaiseWindow(m_window);
 }
 
 CDisplay::~CDisplay() {
@@ -62,7 +65,13 @@ void CDisplay::update() {
       bool is_on = get_pixel(x, y);
       if (is_on == true) {
         // pixel is on
-        SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
+        if (m_cfg->get<std::string>("draw_color")=="white") {
+          SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+        }
+        else {
+          // green
+          SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
+        }
       } else {
         // pixel is off
         SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -77,12 +86,12 @@ void CDisplay::update() {
 
 int CDisplay::put_pixel(int x, int y, bool on) {
   int pos = SCREEN_TO_FLAT_OFFSET(x, y, m_width);
-  // xor pixel on screen
-  // 1 xor 0 = 1
-  // 1 xor 1 = 0
-  // 0 xor 0 = 0
+  // xor pixel on screen (sprites are xored, so when a pixel is written over
+  // another it's zeroed)
   bool b = m_videomem[pos] ^ on;
   m_videomem[pos] = b;
+
+  // and return wether there has been a collision
   return !((int)b);
 }
 
@@ -129,17 +138,17 @@ void CDisplay::scroll_right() {
 }
 void CDisplay::clear() { m_videomem.fill(false); }
 
-void CDisplay::set_mode(int mode) {
-  m_mode = mode;
-  if (mode == MODE_SUPER_CHIP8) {
+void CDisplay::set_mode(const char *mode) {
+  if (m_cfg->get<std::string>("mode") == mode) {
     m_height = 64;
     m_width = 128;
   } else {
     m_height = 32;
     m_width = 64;
   }
-  SDL_SetWindowSize(m_window, m_width * DEFAULT_SCALE_FACTOR,
-                    m_height * DEFAULT_SCALE_FACTOR);
+
+  double scale = m_cfg->get<double>("scale");
+  SDL_SetWindowSize(m_window, m_width * scale, m_height * scale);
 }
 
 int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
@@ -147,8 +156,8 @@ int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
 
   const uint8_t *ptr = s;
   int collision = 0;
-  if (len == 0 && m_mode == MODE_SUPER_CHIP8) {
-    // draw 16x16 sprite, each line is 2 bytes (16 bit)
+  if (len == 0 && m_cfg->get<std::string>("mode") == "sc8") {
+    // super chip8 mode, draw 16x16 sprite, each line is 2 bytes (16 bit)
     for (int i = 0; i < 16; i++) {
       // get sprite line
       uint16_t line;
@@ -174,9 +183,9 @@ int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
             // collision
             collision++;
           }
-        }// else {
+        } // else {
           // clear the pixel
-          //put_pixel(xx, yy, false);
+          // put_pixel(xx, yy, false);
         //}
       }
       // next line

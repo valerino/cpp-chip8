@@ -4,7 +4,31 @@
 
 #include <vuelib.h>
 #include "CCpu.h"
-#include "defs.h"
+
+CCpu::CCpu(CConfiguration *cfg, CMemory *mem, CDisplay *display, CInput *input,
+           CSound *sound)
+    : m_cfg{cfg}, m_mem{mem}, m_display{display}, m_input{input},
+      m_sound(sound),  m_I{0}, m_V{}, m_T{0}, m_D{0}, m_PC{CHIP8_START_ADDRESS},
+      m_stack{}, m_flags{}, m_SP{0} {
+
+  if (cfg->get<std::string>("mode") == "eti660") {
+    // different start address
+    m_PC = ETI660_START_ADDRESS;
+  }
+
+  // initializes the random number generator
+  srand(time(NULL));
+
+  // map decoders for each opcode category
+  m_decoders = {
+      {0, &CCpu::decode_0},   {1, &CCpu::decode_1},   {2, &CCpu::decode_2},
+      {3, &CCpu::decode_3},   {4, &CCpu::decode_4},   {5, &CCpu::decode_5},
+      {6, &CCpu::decode_6},   {7, &CCpu::decode_7},   {8, &CCpu::decode_8},
+      {9, &CCpu::decode_9},   {0xa, &CCpu::decode_A}, {0xb, &CCpu::decode_B},
+      {0xc, &CCpu::decode_C}, {0xd, &CCpu::decode_D}, {0xe, &CCpu::decode_E},
+      {0xf, &CCpu::decode_F},
+  };
+}
 
 CCpu::~CCpu() {}
 
@@ -30,30 +54,6 @@ int CCpu::step() {
     m_PC += res;
   }
   return res;
-}
-
-CCpu::CCpu(int mode, CMemory *mem, CInput *input, CDisplay *display,
-           CSound *sound)
-    : m_mem{mem}, m_input{input},
-      m_sound(sound), m_display{display}, m_mode{mode}, m_I{0}, m_V{}, m_T{0},
-      m_D{0}, m_PC{CHIP8_START_ADDRESS}, m_stack{}, m_flags{}, m_SP{0} {
-  if (m_mode == MODE_ETI660) {
-    // different start address
-    m_PC = ETI660_START_ADDRESS;
-  }
-
-  // initializes the random number generator
-  srand(time(NULL));
-
-  // map decoders for each opcode category
-  m_decoders = {
-      {0, &CCpu::decode_0},   {1, &CCpu::decode_1},   {2, &CCpu::decode_2},
-      {3, &CCpu::decode_3},   {4, &CCpu::decode_4},   {5, &CCpu::decode_5},
-      {6, &CCpu::decode_6},   {7, &CCpu::decode_7},   {8, &CCpu::decode_8},
-      {9, &CCpu::decode_9},   {0xa, &CCpu::decode_A}, {0xb, &CCpu::decode_B},
-      {0xc, &CCpu::decode_C}, {0xd, &CCpu::decode_D}, {0xe, &CCpu::decode_E},
-      {0xf, &CCpu::decode_F},
-  };
 }
 
 int CCpu::decode_0(uint16_t addr) {
@@ -140,16 +140,17 @@ int CCpu::decode_0(uint16_t addr) {
      * 00FE*    Disable extended screen mode (super chip8)
      */
     CDbg::verbose("LOW");
-    m_display->set_mode(MODE_CHIP8);
+    m_display->set_mode("chip8");
     m_update_display = true;
     break;
 
   case 0xff:
     /*
-     * 00FF*    Enable extended screen mode for full-screen graphics (super chip8)
+     * 00FF*    Enable extended screen mode for full-screen graphics (super
+     * chip8)
      */
     CDbg::verbose("HIGH");
-    m_display->set_mode(MODE_SUPER_CHIP8);
+    m_display->set_mode("sc8");
     m_update_display = true;
     break;
 
@@ -343,7 +344,7 @@ int CCpu::decode_8(uint16_t addr) {
     */
     CDbg::verbose("ADD V%x, V%x", x, y);
     r = m_V[x] + m_V[y];
-    if (r > (0xff - r)) {
+    if (r > (0xff)) {
       // set carry flag
       m_V[0xf] = 1;
     } else {
@@ -415,7 +416,7 @@ int CCpu::decode_8(uint16_t addr) {
       0. Then Vx is multiplied by 2.
      */
     CDbg::verbose("SHL V%x, 1", x);
-    if (m_mode == MODE_SUPER_CHIP8) {
+    if (m_cfg->get<std::string>("mode") == "sc8") {
       // seems super-chip8 requires the v[x] register to be shifted!
       y = x;
     }
@@ -578,6 +579,8 @@ int CCpu::decode_F(uint16_t addr) {
   uint8_t x = (addr & 0xf00) >> 8;
   uint8_t kk = (addr & 0x0ff);
   int res = sizeof(uint16_t);
+  int idx = -1;
+
   switch (kk) {
   case 0x07:
     /*
@@ -598,7 +601,15 @@ int CCpu::decode_F(uint16_t addr) {
       stored in Vx.
      */
     CDbg::verbose("LD V%x, K", x);
-    m_V[x] = m_input->wait_key();
+    idx = m_input->is_key_pressed();
+    if (idx == -1) {
+      // will keep the same PC
+      res = 0;
+    }
+    else {
+      // key has been pressed
+      m_V[x] = idx;
+    }
     break;
   case 0x15:
     /*
@@ -629,6 +640,7 @@ int CCpu::decode_F(uint16_t addr) {
      */
     CDbg::verbose("ADD I, V%x", x);
     m_I += m_V[x];
+    // m_I &= 0xfff;
     break;
   case 0x29:
     /*
@@ -681,6 +693,7 @@ int CCpu::decode_F(uint16_t addr) {
     for (int i = 0; i <= x; i++) {
       m_mem->put_byte(m_I + i, m_V[i]);
     }
+    // m_I+=x + 1;
     break;
   case 0x65:
     /*
@@ -694,13 +707,14 @@ int CCpu::decode_F(uint16_t addr) {
     for (int i = 0; i <= x; i++) {
       m_V[i] = m_mem->get_byte(m_I + i);
     }
+    // m_I+=x + 1;
     break;
   case 0x75:
     /*
      * FX75*    Store V0..VX in RPL user flags (X <= 7) (super chip8)
      */
     CDbg::verbose("LD V%x, [RPL]", x);
-    for (int i = 0; i < x; i++) {
+    for (int i = 0; i <= x; i++) {
       m_flags[i] = m_V[i];
     }
     break;
@@ -709,7 +723,7 @@ int CCpu::decode_F(uint16_t addr) {
      * FX85*    Read V0..VX from RPL user flags (X <= 7) (super chip8)
      */
     CDbg::verbose("LD [RPL], V%x", x);
-    for (int i = 0; i < x; i++) {
+    for (int i = 0; i <= x; i++) {
       m_V[i] = m_flags[i];
     }
     break;
@@ -723,12 +737,12 @@ int CCpu::decode_F(uint16_t addr) {
 
 void CCpu::updateTimers() {
   // update delay timer
-  if (m_D != 0) {
+  if (m_D > 0) {
     m_D--;
   }
 
   // update sound timer
-  if (m_T != 0) {
+  if (m_T > 0) {
     m_sound->beep();
     m_T--;
   }

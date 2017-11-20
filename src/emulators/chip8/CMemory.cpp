@@ -3,12 +3,12 @@
 //
 
 #include <vuelib.h>
-#include "defs.h"
 #include <assert.h>
 #include "CMemory.h"
 #include "CFile.h"
 
-CMemory::CMemory(int mode, const char *charset_path, const char *rom_path)
+CMemory::CMemory(CConfiguration *cfg, const char *charset_path,
+                 const char *rom_path)
     : m_mem{NULL} {
 
   // allocate memory (4kb)
@@ -44,8 +44,9 @@ CMemory::CMemory(int mode, const char *charset_path, const char *rom_path)
   memcpy(m_mem, charset, CHARSET_SIZE);
 
   // copy game rom
-  uint8_t *start_address = (mode == MODE_ETI660 ? m_mem + ETI660_START_ADDRESS
-                                                : m_mem + CHIP8_START_ADDRESS);
+  uint8_t *start_address =
+      (cfg->get<std::string>("mode") == "eti660" ? m_mem + ETI660_START_ADDRESS
+                                                 : m_mem + CHIP8_START_ADDRESS);
   memcpy(start_address, game, game_size);
 
   CMem::free(game);

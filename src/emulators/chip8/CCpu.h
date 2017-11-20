@@ -9,7 +9,7 @@
 #include "CInput.h"
 #include "CDisplay.h"
 #include "CSound.h"
-
+#include <CConfiguration.h>
 /*
  * docs taken from
  * http://devernay.free.fr/hacks/chip8/C8TECH10.HTM (chip8 only)
@@ -24,13 +24,14 @@ class CCpu {
 public:
   /**
    * initializes the cpu
-   * @param mode MODE_CHIP8, MODE_SUPERCHIP8, MODE_ETI660
+   * @param cfg CConfiguration instance
    * @param mem represents emulated memory
-   * @param input represents emulated input
    * @param display represents emulated display
+   * @param input represents emulated input
    * @param sound represents emulated sound hw
    */
-  CCpu(int mode, CMemory *mem, CInput *input, CDisplay *display, CSound *sound);
+  CCpu(CConfiguration *cfg, CMemory *mem, CDisplay *display, CInput *input,
+       CSound *sound);
   ~CCpu();
 
   /**
@@ -52,11 +53,11 @@ public:
   void updateTimers();
 
 private:
+  CConfiguration *m_cfg;
   CMemory *m_mem;
   CInput *m_input;
   CDisplay *m_display;
   CSound *m_sound;
-  int m_mode;
   uint16_t m_I;
   std::array<uint8_t, 16> m_V;     // V0-VF
   std::array<uint8_t, 16> m_flags; // RPL user flags (super-chip8 only)

@@ -3,7 +3,6 @@
 //
 
 #include <vuelib.h>
-#include "defs.h"
 #include "CInput.h"
 
 CInput::CInput() : m_keypad{} {}
@@ -12,7 +11,6 @@ CInput::~CInput() {}
 
 bool CInput::is_key_pressed(int idx) {
   // read keyboard state
-  SDL_PumpEvents();
   const Uint8 *state = SDL_GetKeyboardState(NULL);
   bool pressed = false;
   switch (idx) {
@@ -70,13 +68,12 @@ bool CInput::is_key_pressed(int idx) {
   return pressed;
 }
 
-int CInput::wait_key() {
-  while (1) {
-    for (int i = 0; i < 16; i++) {
-      bool pressed = is_key_pressed(i);
-      if (pressed) {
-        return i;
-      }
+int CInput::is_key_pressed() {
+  for (int i = 0; i < 16; i++) {
+    bool pressed = is_key_pressed(i);
+    if (pressed) {
+      return i;
     }
   }
+  return -1;
 }

@@ -16,10 +16,10 @@ public:
   ~CInput();
 
   /**
-   * halt execution until a key is pressed
-   * @return the pressed key index
+   * get a key
+   * @return the pressed key index, or -1 if no key has been pressed
    */
-  int wait_key();
+  int is_key_pressed();
 
   /**
    * check if the given key is pressed

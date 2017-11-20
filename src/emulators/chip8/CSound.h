@@ -8,15 +8,13 @@
 // implements the sound subsystem
 class CSound {
 public:
-  /**
-   * emit continuos buzz, call stop_buzz() to stop
-   */
-  void beep();
+  CSound();
+  ~CSound();
 
   /**
-   * stop buzzing
+   * emit buzz
    */
-  void stop_buzz();
+  void beep();
 };
 
 #endif // PROJECT_CSOUND_H

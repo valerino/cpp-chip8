@@ -21,14 +21,26 @@ public:
   void pause() override;
   void configure() override;
 
+  /**
+   * runs in the sound thread while the emulator is running
+   */
+  void soundthread_proc();
+
 private:
+  bool m_running;
+  CSound *m_sound;
   CDisplay *m_display;
   CInput *m_input;
   CMemory *m_memory;
   CCpu *m_cpu;
-  CSound *m_sound;
-  bool m_running;
   bool m_paused;
+
+  /**
+   * handle sdl events and control events
+   * ESC=exit emulator
+   * P=pause
+   */
+  void poll();
 };
 
 #endif // PROJECT_CEMUCHIP8_H

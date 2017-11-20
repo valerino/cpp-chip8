@@ -26,6 +26,8 @@
 #include "CConfiguration.h"
 #include "CFile.h"
 #include "CMem.h"
-#include "CGfx.h"
-
+#include "CSDLUtils.h"
+#include "CUIUtils.h"
+#include "CDynLoad.h"
+#include "CSDLUtils.h"
 #endif // PROJECT_VUELIB_H

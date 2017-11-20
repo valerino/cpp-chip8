@@ -6,6 +6,7 @@
 #define PROJECT_CMEMORY_H
 
 #include <stdint.h>
+#include <CConfiguration.h>
 
 /*
  * docs taken from http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
@@ -13,7 +14,6 @@
 #define CHIP8_MEMORY_SIZE 4 * 1024 // 4k size
 #define CHIP8_START_ADDRESS 0x200
 #define ETI660_START_ADDRESS 0x600
-#define INTERPRETER_START 0x0
 #define INTERPRETER_MAX_SIZE 0x1ff
 #define CHARSET_SIZE 80
 
@@ -21,12 +21,12 @@ class CMemory {
 public:
   /**
    * initializes memory subsystem
-   * @param mode MODE_CHIP8, MODE_SUPERCHIP8, MODE_ETI660
+   * @param cfg CConfiguration instance
    * @param charset_path path to the charset file
    * @param rom_path path to the rom file
    * @throws std::system_error(ENOENT) when not found
    */
-  CMemory(int mode, const char *charset_path, const char *rom_path);
+  CMemory(CConfiguration* cfg, const char *charset_path, const char *rom_path);
 
   /**
    * get 16 bit from memory, big endian
