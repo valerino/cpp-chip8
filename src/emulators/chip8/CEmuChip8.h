@@ -40,7 +40,7 @@ private:
    * ESC=exit emulator
    * P=pause
    */
-  void poll();
+  void sdl_poll();
 };
 
 #endif // PROJECT_CEMUCHIP8_H

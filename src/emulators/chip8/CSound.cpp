@@ -5,45 +5,64 @@
 #include "CSound.h"
 #include <vuelib.h>
 
-void audio_callback(void *user_data, Uint8 *raw_buffer, int bytes)
-{
-  Sint16 *buffer = (Sint16*)raw_buffer;
-  int sample_rate=9600;
-  int length = bytes / 2; // 2 bytes per sample for AUDIO_S16SYS
-  int &sample_nr(*(int*)user_data);
-  for(int i = 0; i < length; i++, sample_nr++)
-  {
-    double time = (double)sample_nr / (double)sample_rate;
-    int hz = 1800;
-    int amplitude = 20000;
-    buffer[i] = (Sint16)(amplitude * sin(2.0f * M_PI * hz * time));
+/**
+ * This is a private structure used for holding information about audio.
+ * I need to create the structure becuase the feeding function for audio
+ * in SDL only allows one single parameter to be provided via user data.
+ * This little trick lets me pass more than one variable.
+ */
+struct audiodata_t {
+  float tone_pos;
+  float tone_inc;
+};
+
+/**
+ * This is the function that generates the beep noise heard in the emulator.
+ * It generates RAW PCM values that are written to the stream. This is fast
+ * and has no dependencies on external files.
+ */
+void feed(void *udata, Uint8 *stream, int len) {
+  struct audiodata_t *audio = (struct audiodata_t *)udata;
+  for (int i = 0; i < len; i++) {
+    stream[i] = sinf(audio->tone_pos) + 127;
+    audio->tone_pos += audio->tone_inc;
   }
 }
 
-CSound::CSound() {
-  int sample_nr = 0;
-  SDL_AudioSpec want;
-  want.freq = 9600; // sample rate
-  want.format = AUDIO_S16SYS; // sample type (here: signed short i.e. 16 bit)
-  want.channels = 1; // only one channel
-  want.samples = 2048; // buffer-size
-  want.callback = audio_callback; // function SDL calls periodically to refill the buffer
-  want.userdata = &sample_nr; // counter, keeping track of current sample number
-  SDL_AudioSpec have;
-  if(SDL_OpenAudio(&want, &have) != 0) {
-    CDbg::warning("error opening audio: %s", SDL_GetError());
-  }
-  if(want.format != have.format) {
-    CDbg::warning("audio format not supported");
-  }
+CSound::CSound() :
+  m_device{0},m_spec{NULL} {
+
+  /* Initialize user data structure. */
+  struct audiodata_t *audio =
+      (struct audiodata_t *)CMem::alloc(sizeof(struct audiodata_t));
+  audio->tone_pos = 0;
+  audio->tone_inc = 2 * 3.14159 * 1000 / 44100;
+
+  /* Set up the audiospec data structure required by SDL. */
+  m_spec = (SDL_AudioSpec *)CMem::alloc(sizeof(SDL_AudioSpec));
+  m_spec->freq = 44100;
+  m_spec->format = AUDIO_U8;
+  m_spec->channels = 1;
+  m_spec->samples = 4096;
+  m_spec->callback = feed;
+  m_spec->userdata = audio;
+  m_device =
+      SDL_OpenAudioDevice(NULL, 0, m_spec, m_spec, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+  int r = 9;
 }
 
 CSound::~CSound() {
-  SDL_CloseAudio();
+  CMem::free(m_spec->userdata);
+  CMem::free(m_spec);
+  if (m_device) {
+    SDL_CloseAudioDevice(m_device);
+  }
 }
 
-void CSound::beep() {
-  SDL_PauseAudio(0);
-  SDL_Delay(10);
-  SDL_PauseAudio(1);
+void CSound::beep(bool enable) {
+  if (enable) {
+    SDL_PauseAudioDevice(m_device,0);
+  } else {
+    SDL_PauseAudioDevice(m_device,1);
+  }
 }

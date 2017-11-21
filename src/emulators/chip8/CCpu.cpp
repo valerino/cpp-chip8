@@ -736,22 +736,36 @@ int CCpu::decode_F(uint16_t addr) {
 }
 
 void CCpu::updateTimers() {
-  // update delay timer
+  // check if the delay timer reached 0
   if (m_D > 0) {
+    // update delay timer
     m_D--;
   }
 
-  // update sound timer
+  // check if the sound timer reached 0
   if (m_T > 0) {
-    m_sound->beep();
+    // time to beep
+    m_sound->beep(true);
+
+    // update sound timer
     m_T--;
+  }
+  else {
+    // timer is 0, stop beeping
+    m_sound->beep(false);
   }
 }
 
 bool CCpu::update_display() {
+  // this has been set by the drawing instructions
   bool b = m_update_display;
+
+  // check if we have to update the display
   if (m_update_display) {
+    // unset if set
     m_update_display = false;
   }
+
+  // and return wether it was set
   return b;
 }

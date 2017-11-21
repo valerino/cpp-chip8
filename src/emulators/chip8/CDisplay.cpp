@@ -101,40 +101,41 @@ bool CDisplay::get_pixel(int x, int y) {
 }
 
 void CDisplay::scroll_down(int n) {
+  if (n <= 0) {
+    return;
+  }
+
   // save n lines
   int to_save = n * m_width;
-  std::vector<bool> saved(to_save);
-  memcpy(&saved, &m_videomem, to_save);
+  std::vector<bool> saved(&m_videomem.at(0), &m_videomem.at(to_save));
 
   // shift down whole buffer
-  memcpy(&m_videomem, &m_videomem + to_save, m_videomem.size() - to_save);
+  memcpy(&m_videomem.at(0), &m_videomem.at(to_save), m_videomem.size() - to_save);
 
   // overlap
-  memcpy(&m_videomem + m_videomem.size() - to_save, &saved, to_save);
+  memcpy(&m_videomem.at(m_videomem.size() - to_save), (char*)&saved.at(0), to_save);
 }
 
 void CDisplay::scroll_left() {
-  // save 4 bytes
-  std::array<bool, 4> saved;
-  memcpy(&saved, &m_videomem, 4);
+  // save 4 bytes in the beginning of video memory
+  std::vector<bool> saved(&m_videomem.at(0), &m_videomem.at(4));
 
   // shift whole screen left
-  memcpy(&m_videomem, &m_videomem + 4, m_videomem.size() - 4);
+  memcpy(&m_videomem.at(0), &m_videomem.at(4), m_videomem.size() - 4);
 
   // overlap
-  memcpy(&m_videomem + m_videomem.size() - 4, &saved, 4);
+  memcpy(&m_videomem.at(0 + m_videomem.size() - 4), &saved, 4);
 }
 
 void CDisplay::scroll_right() {
-  // save 4 bytes
-  std::array<bool, 4> saved;
-  memcpy(&saved, &m_videomem + m_videomem.size() - 4, 4);
+  // save 4 bytes in the end of video memory
+  std::vector<bool> saved(&m_videomem.at(m_videomem.size() - 4), &m_videomem.at(m_videomem.size()));
 
   // shift whole screen right
-  memcpy(&m_videomem + 4, &m_videomem, m_videomem.size() - 4);
+  memcpy(&m_videomem.at(4), &m_videomem.at(0), m_videomem.at(m_videomem.size() - 4));
 
   // overlap
-  memcpy(&m_videomem, &saved, 4);
+  memcpy(&m_videomem.at(0), &saved, 4);
 }
 void CDisplay::clear() { m_videomem.fill(false); }
 

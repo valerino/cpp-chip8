@@ -24,8 +24,8 @@ void CEmuChip8::pause() { m_paused = !m_paused; }
 
 void CEmuChip8::configure() {}
 
-void CEmuChip8::poll() {
-  // poll sdl events
+void CEmuChip8::sdl_poll() {
+  // sdl_poll sdl events
   uint8_t *keys;
   if (CSDLUtils::SDLPollEvents(&keys) != 0) {
     // must quit
@@ -48,17 +48,14 @@ int CEmuChip8::start(const char *rom_path) {
 
   // provide a default
   cfg.read("{ \"mode\": \"chip8\","
-           "\"instructions_per_cycle\": 12,"
            "\"scale\": 10.0,"
            "\"fullscreen\": true,"
            "\"draw_color\": \"white\"}");
   std::string modestring = cfg.get<std::string>("mode");
   double scale_factor = cfg.get<double>("scale");
   bool full_screen = cfg.get<bool>("full_screen");
-  int instructions_per_cycle = cfg.get<int>("instructions_per_cycle");
   std::string draw_color = cfg.get<std::string>("draw_color");
   CDbg::notify("chip8->mode=%s", modestring.data());
-  CDbg::notify("chip8->instructions_per_cycle=%d", instructions_per_cycle);
   CDbg::notify("chip8->full_screen=%d", full_screen);
   CDbg::notify("chip8->scale=%f", scale_factor);
   CDbg::notify("chip8->draw_color=%s", draw_color.data());
@@ -89,45 +86,72 @@ int CEmuChip8::start(const char *rom_path) {
   m_sound = new CSound();
   m_cpu = new CCpu(&cfg, m_memory, m_display, m_input, m_sound);
 
-  // loop
   while (m_running) {
+    // poll sdl events
+    sdl_poll();
+
+    // if the emulator is paused just delay loop unpaused
     if (m_paused) {
-      // just delay....
-      poll();
       continue;
     }
 
-    uint32_t ticks_start_ms = SDL_GetTicks();
-    for (int i = 0; i < instructions_per_cycle; i++) {
+    // this is the virtual cpu clock, running at 500hz
+    // (arbitrary, since it's not a real cpu ....)
+    int clock_hz = 500;
+    if (modestring == "sc8") {
+      // on super chip8, cpu clock is at 1000hz
+      clock_hz = 1000;
+    }
+
+    // a clock cycle is these many ms
+    int clock_cycle_ms = 1000 / clock_hz;
+
+    // delay and sound timers tick at 60hz
+    int timers_hz = 60;
+
+    // a timers cycle is these many ms
+    int timers_cycle_ms = 1000 / timers_hz;
+
+    // execute a cycle
+    int instructions = 0;
+    int elapsed_ms = 0;
+    uint32_t start_ms = SDL_GetTicks();
+    uint32_t end_ms = 0;
+    for (;;) {
+      // step the cpu, one instruction
       res = m_cpu->step();
+      instructions++;
       if (res == ERROR_EXIT_OPCODE || res == ERROR_INVALID_OPCODE) {
-        // EXIT instruction found or invalid opcode
+        // EXIT instruction found or invalid opcode, next iteration will exit!
         m_running = false;
         break;
       }
-    }
-    if (m_running == false) {
-      break;
-    }
 
-    // update timers
-    m_cpu->updateTimers();
+      // update display if needed
+      if (m_cpu->update_display()) {
+        m_display->update();
+      }
 
-    if (m_cpu->update_display()) {
-      m_display->update();
+      // check clock hz, if we have run for the number of ms in a clock cycle
+      // we exit the execution loop
+      end_ms = SDL_GetTicks();
+      elapsed_ms = (end_ms - start_ms);
+      if (elapsed_ms >= clock_cycle_ms) {
+        break;
+      }
     }
 
     // cap at 60hz
-    int ticks_at_60hz_ms = 1000 / 60;
-    uint32_t ticks_end_ms = SDL_GetTicks();
-    uint32_t elapsed = ticks_end_ms - ticks_start_ms;
-    if (elapsed < (ticks_at_60hz_ms)) {
-      // sleep for the remaining time to reach 60hz
-      SDL_Delay(ticks_at_60hz_ms - elapsed);
+    end_ms = SDL_GetTicks();
+    elapsed_ms += (end_ms - start_ms);
+    if (elapsed_ms < timers_cycle_ms) {
+      // sleep for the remaining to complete the 60hz cap
+      int remaining = timers_cycle_ms - elapsed_ms;
+      SDL_Delay(remaining);
     }
 
-    // poll sdl events
-    poll();
+    // at 60hz, we have to update timers too
+    m_cpu->updateTimers();
   }
 
   // done, release SDL

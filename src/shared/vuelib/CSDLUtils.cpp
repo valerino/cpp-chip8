@@ -7,7 +7,7 @@
 int CSDLUtils::SDLPollEvents(uint8_t** keys) {
   *keys = NULL;
 
-  // poll sdl events
+  // sdl_poll sdl events
   SDL_Event ev;
   while (SDL_PollEvent(&ev)) {
     if (ev.type == SDL_QUIT) {

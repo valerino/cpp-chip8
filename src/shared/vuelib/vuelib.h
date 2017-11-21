@@ -5,7 +5,7 @@
 #ifndef PROJECT_VUELIB_H
 #define PROJECT_VUELIB_H
 
-#ifdef TARGET_OS_WIN32
+#ifdef WIN32
 #include <windows.h>
 #endif
 
