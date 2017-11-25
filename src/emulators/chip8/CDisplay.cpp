@@ -4,6 +4,7 @@
 
 #include <vuelib.h>
 #include "CDisplay.h"
+#include "defs.h"
 
 /**
  * convert screen coordinates to flat buffer offset
@@ -11,34 +12,48 @@
 #define SCREEN_TO_FLAT_OFFSET(__x__, __y__, __w__) ((__y__ * __w__) + __x__)
 
 CDisplay::CDisplay(CConfiguration *cfg, CMemory *mem)
-    : m_cfg{cfg}, m_mem{mem}, m_height{32}, m_width{64}, m_videomem{} {
+    : m_scale(10.0), m_color(DRAW_COLOR_GREEN), m_mode(MODE_CHIP8), m_cfg{cfg}, m_mem{mem}, m_height{32}, m_width{64}, m_videomem{} {
 
   if (m_cfg->get<std::string>("mode") == "sc8") {
     // super chip 8
     m_height = 64;
     m_width = 128;
+    m_mode = MODE_SUPERCHIP8;
   }
 
-  // create window
+  // do we want fullscreen ?
+  // TODO: fix appearance
   uint32_t flags = 0;
   if (m_cfg->get<bool>("fullscreen")) {
     flags = SDL_WINDOW_FULLSCREEN;
   }
 
-  double scale = m_cfg->get<double>("scale");
+  // get the wanted pixel draw color
+  if (m_cfg->get<std::string>("draw_color") == "white") {
+    m_color = DRAW_COLOR_WHITE;
+  }
+  else {
+    m_color = DRAW_COLOR_GREEN;
+  }
+
+  // get the scale to apply
+  m_scale = m_cfg->get<double>("scale");
+
+  // create the window
   m_window =
       SDL_CreateWindow("Chip8", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                       m_width * scale, m_height * scale, flags|SDL_WINDOW_OPENGL);
+                       m_width * m_scale, m_height * m_scale, flags|SDL_WINDOW_OPENGL);
   if (!m_window) {
-    CDbg::error(SDL_GetError());
-    return;
+    // error creating window
+    const char* msg = SDL_GetError();
+    throw std::runtime_error(msg);
   }
 
   // get the default renderer
   m_renderer = SDL_CreateRenderer(m_window, -1, 0);
 
   // scale output
-  SDL_RenderSetScale(m_renderer, scale, scale);
+  SDL_RenderSetScale(m_renderer, m_scale, m_scale);
 
   // clear and show window
   SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 0);
@@ -65,7 +80,7 @@ void CDisplay::update() {
       bool is_on = get_pixel(x, y);
       if (is_on == true) {
         // pixel is on
-        if (m_cfg->get<std::string>("draw_color")=="white") {
+        if (m_color == DRAW_COLOR_WHITE) {
           SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
         }
         else {
@@ -113,7 +128,7 @@ void CDisplay::scroll_down(int n) {
   memcpy(&m_videomem.at(0), &m_videomem.at(to_save), m_videomem.size() - to_save);
 
   // overlap
-  memcpy(&m_videomem.at(m_videomem.size() - to_save), (char*)&saved.at(0), to_save);
+  memcpy(&m_videomem.at(m_videomem.size() - to_save), &saved, to_save);
 }
 
 void CDisplay::scroll_left() {
@@ -139,17 +154,17 @@ void CDisplay::scroll_right() {
 }
 void CDisplay::clear() { m_videomem.fill(false); }
 
-void CDisplay::set_mode(const char *mode) {
-  if (m_cfg->get<std::string>("mode") == mode) {
+void CDisplay::set_mode(int mode) {
+  if (mode == MODE_SUPERCHIP8) {
     m_height = 64;
     m_width = 128;
   } else {
+    // standard chip8
     m_height = 32;
     m_width = 64;
   }
 
-  double scale = m_cfg->get<double>("scale");
-  SDL_SetWindowSize(m_window, m_width * scale, m_height * scale);
+  SDL_SetWindowSize(m_window, m_width * m_scale, m_height * m_scale);
 }
 
 int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
@@ -157,7 +172,7 @@ int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
 
   const uint8_t *ptr = s;
   int collision = 0;
-  if (len == 0 && m_cfg->get<std::string>("mode") == "sc8") {
+  if (len == 0 && m_mode==MODE_SUPERCHIP8) {
     // super chip8 mode, draw 16x16 sprite, each line is 2 bytes (16 bit)
     for (int i = 0; i < 16; i++) {
       // get sprite line

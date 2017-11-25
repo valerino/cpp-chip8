@@ -6,6 +6,7 @@
 #include "CDisplay.h"
 #include "CInput.h"
 #include "CCpu.h"
+#include "defs.h"
 #include "CEmuChip8.h"
 
 std::string CEmuChip8::name() { return std::string("vue-chip8"); }
@@ -51,14 +52,22 @@ int CEmuChip8::start(const char *rom_path) {
            "\"scale\": 10.0,"
            "\"fullscreen\": true,"
            "\"draw_color\": \"white\"}");
-  std::string modestring = cfg.get<std::string>("mode");
+
+  // get operation mode
+  int mode;
+  std::string mode_string = cfg.get<std::string>("mode");
+  if (mode_string == "chip8") {
+    mode = MODE_CHIP8;
+  }
+  else if (mode_string == "sc8") {
+    mode = MODE_SUPERCHIP8;
+  }
+
+  // print configuration
   double scale_factor = cfg.get<double>("scale");
   bool full_screen = cfg.get<bool>("full_screen");
   std::string draw_color = cfg.get<std::string>("draw_color");
-  CDbg::notify("chip8->mode=%s", modestring.data());
-  CDbg::notify("chip8->full_screen=%d", full_screen);
-  CDbg::notify("chip8->scale=%f", scale_factor);
-  CDbg::notify("chip8->draw_color=%s", draw_color.data());
+  CDbg::notify("mode=%s,full_screen=%d,scale=%f,draw_color=%s", mode_string.data(), full_screen, scale_factor, draw_color.data());
 
   // initialize SDL
   int res = SDL_Init(SDL_INIT_EVERYTHING);
@@ -73,7 +82,7 @@ int CEmuChip8::start(const char *rom_path) {
   try {
     m_memory = new CMemory(&cfg, charset_path.c_str(), rom_path);
   } catch (std::system_error &e) {
-    CDbg::error(e.what());
+    CUIUtils::show_toast_message(MSG_ERROR, e.what());
     SDL_Quit();
     return 1;
   }
@@ -81,7 +90,15 @@ int CEmuChip8::start(const char *rom_path) {
   // set running
   m_running = true;
 
-  m_display = new CDisplay(&cfg, m_memory);
+  try {
+    m_display = new CDisplay(&cfg, m_memory);
+  }
+  catch (std::exception e) {
+    CDbg::error(e.what());
+    SDL_Quit();
+    return 1;
+  }
+
   m_input = new CInput();
   m_sound = new CSound();
   m_cpu = new CCpu(&cfg, m_memory, m_display, m_input, m_sound);
@@ -98,7 +115,7 @@ int CEmuChip8::start(const char *rom_path) {
     // this is the virtual cpu clock, running at 500hz
     // (arbitrary, since it's not a real cpu ....)
     int clock_hz = 500;
-    if (modestring == "sc8") {
+    if (mode == MODE_SUPERCHIP8) {
       // on super chip8, cpu clock is at 1000hz
       clock_hz = 1000;
     }

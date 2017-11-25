@@ -8,6 +8,12 @@
 #include "CMemory.h"
 #include <CConfiguration.h>
 
+/*
+ * define different draw colors
+ */
+#define DRAW_COLOR_WHITE 0
+#define DRAW_COLOR_GREEN 1
+
 /**
  * implements the display subsystem
  */
@@ -17,6 +23,7 @@ public:
    * initializes the display
    * @param cfg the configuration instance
    * @param mem represents emulated memory
+   * @throws if SDL fails
    */
   CDisplay(CConfiguration *cfg, CMemory *mem);
   ~CDisplay();
@@ -76,14 +83,17 @@ public:
 
   /**
    * dynamically set mode via the HIGH/LOW instruction from the cpu
-   * @param mode "chip8","sc8","eti660"
+   * @param mode one of the modes defined in defs.h (MODE_CHIP8, MODE_SUPERCHIP8, MODE_ETI660)
    */
-  void set_mode(const char *mode);
+  void set_mode(int mode);
 
 private:
   CConfiguration *m_cfg;
   int m_width;
   int m_height;
+  int m_mode;
+  int m_color;
+  double m_scale;
   SDL_Renderer *m_renderer;
   SDL_Window *m_window;
   CMemory *m_mem;

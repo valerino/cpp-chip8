@@ -4,16 +4,22 @@
 
 #include <vuelib.h>
 #include "CCpu.h"
+#include "defs.h"
 
 CCpu::CCpu(CConfiguration *cfg, CMemory *mem, CDisplay *display, CInput *input,
            CSound *sound)
     : m_cfg{cfg}, m_mem{mem}, m_display{display}, m_input{input},
       m_sound(sound),  m_I{0}, m_V{}, m_T{0}, m_D{0}, m_PC{CHIP8_START_ADDRESS},
-      m_stack{}, m_flags{}, m_SP{0} {
+      m_stack{}, m_flags{}, m_SP{0}, m_mode{MODE_CHIP8} {
 
   if (cfg->get<std::string>("mode") == "eti660") {
     // different start address
     m_PC = ETI660_START_ADDRESS;
+    m_mode=MODE_ETI660;
+  }
+  else if (cfg->get<std::string>("mode") == "sc8") {
+    // super chip8
+    m_mode = MODE_SUPERCHIP8;
   }
 
   // initializes the random number generator
@@ -140,7 +146,7 @@ int CCpu::decode_0(uint16_t addr) {
      * 00FE*    Disable extended screen mode (super chip8)
      */
     CDbg::verbose("LOW");
-    m_display->set_mode("chip8");
+    m_display->set_mode(MODE_CHIP8);
     m_update_display = true;
     break;
 
@@ -150,7 +156,7 @@ int CCpu::decode_0(uint16_t addr) {
      * chip8)
      */
     CDbg::verbose("HIGH");
-    m_display->set_mode("sc8");
+    m_display->set_mode(MODE_SUPERCHIP8);
     m_update_display = true;
     break;
 
@@ -416,7 +422,7 @@ int CCpu::decode_8(uint16_t addr) {
       0. Then Vx is multiplied by 2.
      */
     CDbg::verbose("SHL V%x, 1", x);
-    if (m_cfg->get<std::string>("mode") == "sc8") {
+    if (m_mode == MODE_SUPERCHIP8) {
       // seems super-chip8 requires the v[x] register to be shifted!
       y = x;
     }

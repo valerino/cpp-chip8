@@ -54,17 +54,18 @@ public:
 
 private:
   CConfiguration *m_cfg;
+  int m_mode;
   CMemory *m_mem;
   CInput *m_input;
   CDisplay *m_display;
   CSound *m_sound;
-  uint16_t m_I;
-  std::array<uint8_t, 16> m_V;     // V0-VF
-  std::array<uint8_t, 16> m_flags; // RPL user flags (super-chip8 only)
-  uint8_t m_T;                     // timer register
-  uint8_t m_D;                     // delay register
-  uint16_t m_PC;
-  std::array<uint16_t, 16> m_stack;
+  uint16_t m_I;                     // I register
+  std::array<uint8_t, 16> m_V;      // V0-VF
+  std::array<uint8_t, 16> m_flags;  // RPL user flags (super-chip8 only)
+  uint8_t m_T;                      // timer register
+  uint8_t m_D;                      // delay register
+  uint16_t m_PC;                    // PC register
+  std::array<uint16_t, 16> m_stack; // the stack
   uint8_t m_SP; // points to top of m_stack
   bool m_update_display;
 
