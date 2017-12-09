@@ -15,18 +15,16 @@
 #define CHIP8_START_ADDRESS 0x200
 #define ETI660_START_ADDRESS 0x600
 #define INTERPRETER_MAX_SIZE 0x1ff
-#define CHARSET_SIZE 80
 
 class CMemory {
 public:
   /**
    * initializes memory subsystem
    * @param cfg CConfiguration instance
-   * @param charset_path path to the charset file
    * @param rom_path path to the rom file
    * @throws std::system_error(ENOENT) when not found
    */
-  CMemory(CConfiguration* cfg, const char *charset_path, const char *rom_path);
+  CMemory(CConfiguration* cfg, const char *rom_path);
 
   /**
    * get 16 bit from memory, big endian
@@ -70,6 +68,12 @@ public:
    * @param b the array
    */
   void put_bytes(uint16_t address, std::vector<uint8_t> b);
+
+  /**
+   * returns start offset of the super-chip8 charset
+   * @return
+   */
+  uint16_t schip8_charset_offset();
 
   /**
    * access to underlying buffer

@@ -80,7 +80,7 @@ int CEmuChip8::start(const char *rom_path) {
   // initialize subsystems
   std::string charset_path("emulators/chip8/chip8_charset.bin");
   try {
-    m_memory = new CMemory(&cfg, charset_path.c_str(), rom_path);
+    m_memory = new CMemory(&cfg, rom_path);
   } catch (std::system_error &e) {
     CUIUtils::show_toast_message(MSG_ERROR, e.what());
     SDL_Quit();

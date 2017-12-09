@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <time.h>
 #include <unistd.h>
 #include <string>
@@ -21,7 +22,7 @@
 
 #include "common.h"
 #include "IEmulator.h"
-
+#include "vmath.h"
 #include "CDbg.h"
 #include "CConfiguration.h"
 #include "CFile.h"

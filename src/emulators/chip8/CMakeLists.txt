@@ -7,7 +7,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${EMULATORS_DIR}/${PROJECT_NAME})
 
 add_library(chip8 SHARED ${SOURCE_FILES})
 
-# copy the charset to output folder too
-configure_file(chip8_charset.bin ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/chip8_charset.bin COPYONLY)
+# deprecated (included in memory module): copy the charset to output folder too
+# configure_file(chip8_charset.bin ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/chip8_charset.bin COPYONLY)
 
 target_link_libraries(chip8 vuelib SDL2)

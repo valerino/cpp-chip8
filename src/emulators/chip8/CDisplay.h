@@ -97,6 +97,7 @@ private:
   SDL_Renderer *m_renderer;
   SDL_Window *m_window;
   CMemory *m_mem;
+  uint8_t m_videoMem[64*128];
   std::array<bool, 64 * 128> m_videomem;
 };
 

@@ -120,51 +120,82 @@ void CDisplay::scroll_down(int n) {
     return;
   }
 
-  // save n lines
+  /*
+   * aaaaaaaaaaaaa  ccccccccccccc
+   * bbbbbbbbbbbbb  aaaaaaaaaaaaa
+   * ccccccccccccc  bbbbbbbbbbbbb
+   */
+
+  // we have to scroll down, save n lines from the bottom
   int to_save = n * m_width;
-  std::vector<bool> saved(&m_videomem.at(0), &m_videomem.at(to_save));
+  std::vector<bool> saved(m_videomem.end() - to_save, m_videomem.end());
 
-  // shift down whole buffer
-  memcpy(&m_videomem.at(0), &m_videomem.at(to_save), m_videomem.size() - to_save);
+  // copy n to n+1 lines
+  std::copy(m_videomem.begin(), m_videomem.end() - to_save, m_videomem.begin() + to_save);
 
-  // overlap
-  memcpy(&m_videomem.at(m_videomem.size() - to_save), &saved, to_save);
+  // overlap saved lines in the beginning
+  std::copy(saved.begin(), saved.end(), m_videomem.begin());
 }
 
 void CDisplay::scroll_left() {
-  // save 4 bytes in the beginning of video memory
-  std::vector<bool> saved(&m_videomem.at(0), &m_videomem.at(4));
+  /*
+   * aaaabbbbbbbbb  bbbbbbbbbaaaa
+   * aaaabbbbbbbbb  bbbbbbbbbaaaa
+   * aaaabbbbbbbbb  bbbbbbbbbaaaa
+   */
 
-  // shift whole screen left
-  memcpy(&m_videomem.at(0), &m_videomem.at(4), m_videomem.size() - 4);
+  // iterate through every line
+  for (int line=0; line < m_height; line++) {
+    // save 4 pixels in the beginning
+    std::vector<bool> saved(m_videomem.begin() + line*m_width, m_videomem.begin() + line*m_width + 4);
 
-  // overlap
-  memcpy(&m_videomem.at(0 + m_videomem.size() - 4), &saved, 4);
+    // shift line 4 pixel left
+    std::copy(m_videomem.begin() + line*m_width + 4, m_videomem.begin() + line*m_width - 4, m_videomem.begin() + line*m_width);
+
+    // overlap saved bytes in the end
+    std::copy(saved.begin(), saved.end(), m_videomem.begin() + line*m_width + m_width - 4);
+  }
 }
 
 void CDisplay::scroll_right() {
-  // save 4 bytes in the end of video memory
-  std::vector<bool> saved(&m_videomem.at(m_videomem.size() - 4), &m_videomem.at(m_videomem.size()));
+  /*
+   * aaaabbbbbbbbb  bbbbaaaabbbbb
+   * aaaabbbbbbbbb  bbbbaaaabbbbb
+   * aaaabbbbbbbbb  bbbbaaaabbbbb
+   */
 
-  // shift whole screen right
-  memcpy(&m_videomem.at(4), &m_videomem.at(0), m_videomem.at(m_videomem.size() - 4));
+  // iterate through every line
+  for (int line=0; line < m_height; line++) {
+    // save 4 pixels in the end
+    std::vector<bool> saved(m_videomem.begin() + line*m_width + m_width - 4, m_videomem.begin() + line*m_width + m_width);
 
-  // overlap
-  memcpy(&m_videomem.at(0), &saved, 4);
+    // shift line 4 pixel right
+    std::copy(m_videomem.begin() + line*m_width, m_videomem.begin() + line*m_width + m_width - 4, m_videomem.begin() + line*m_width + 4);
+
+    // overlap saved bytes in the beginning
+    std::copy(saved.begin(), saved.end(), m_videomem.begin() + line*m_width);
+  }
 }
+
 void CDisplay::clear() { m_videomem.fill(false); }
 
 void CDisplay::set_mode(int mode) {
   if (mode == MODE_SUPERCHIP8) {
     m_height = 64;
     m_width = 128;
+    m_mode = MODE_SUPERCHIP8;
   } else {
     // standard chip8
     m_height = 32;
     m_width = 64;
+    m_mode = MODE_CHIP8;
   }
 
+  // set new size
   SDL_SetWindowSize(m_window, m_width * m_scale, m_height * m_scale);
+
+  // and center window
+  SDL_SetWindowPosition(m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 }
 
 int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
@@ -173,11 +204,10 @@ int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
   const uint8_t *ptr = s;
   int collision = 0;
   if (len == 0 && m_mode==MODE_SUPERCHIP8) {
-    // super chip8 mode, draw 16x16 sprite, each line is 2 bytes (16 bit)
+    // super chip8 mode, draw 16x16 sprite (32 bytes), each line is 2 bytes (16 bit)
     for (int i = 0; i < 16; i++) {
       // get sprite line
-      uint16_t line;
-      memcpy(&line, ptr, 2);
+      uint16_t line = (ptr[0] << 8) | ptr[1];
 
       // draw 16 bit line pixel per pixel
       for (int j = 0; j < 16; j++) {
@@ -199,13 +229,13 @@ int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
             // collision
             collision++;
           }
-        } // else {
+        } else {
           // clear the pixel
-          // put_pixel(xx, yy, false);
-        //}
+          put_pixel(xx, yy, false);
+        }
       }
       // next line
-      ptr += 2;
+      ptr+=2;
     }
   } else {
     // draw 8*len sprite
@@ -218,10 +248,8 @@ int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
         // handle overlapping
         int xx = x + j;
         if (xx > m_width) {
-          // w=60 xx=61
           xx = xx - m_width;
         }
-
         int yy = y + i;
         if (yy > m_height) {
           yy = yy - m_height;

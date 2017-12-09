@@ -147,6 +147,7 @@ int CCpu::decode_0(uint16_t addr) {
      */
     CDbg::verbose("LOW");
     m_display->set_mode(MODE_CHIP8);
+    m_mode = MODE_CHIP8;
     m_update_display = true;
     break;
 
@@ -157,6 +158,7 @@ int CCpu::decode_0(uint16_t addr) {
      */
     CDbg::verbose("HIGH");
     m_display->set_mode(MODE_SUPERCHIP8);
+    m_mode = MODE_SUPERCHIP8;
     m_update_display = true;
     break;
 
@@ -523,11 +525,16 @@ int CCpu::decode_D(uint16_t addr) {
   CDbg::verbose("DRW V%x, V%x, %x", x, y, n);
 
   // read memory at I
-  std::vector<uint8_t> sprite = m_mem->get_bytes(m_I, n);
+  int bytes_to_fetch = n;
+  if (n == 0 && m_mode == MODE_SUPERCHIP8) {
+    // in super-chip8 mode, a sprite is 32 bytes
+    bytes_to_fetch = 32;
+  }
+  std::vector<uint8_t> sprite = m_mem->get_bytes(m_I, bytes_to_fetch);
 
   // draw
   int collision =
-      m_display->draw_sprite(sprite.data(), sprite.size(), m_V[x], m_V[y]);
+      m_display->draw_sprite(sprite.data(), n, m_V[x], m_V[y]);
   if (collision) {
     // set flag
     m_V[0xf] = 1;
@@ -646,7 +653,7 @@ int CCpu::decode_F(uint16_t addr) {
      */
     CDbg::verbose("ADD I, V%x", x);
     m_I += m_V[x];
-    // m_I &= 0xfff;
+    m_I &= 0xfff;
     break;
   case 0x29:
     /*
@@ -667,8 +674,8 @@ int CCpu::decode_F(uint16_t addr) {
      */
     CDbg::verbose("LD FX, V%x", x);
     // extended istruction, get font sprite at v[x], each sprite is 10 byte,
-    // charset starts at 0
-    m_I = m_V[x] * 10;
+    // charset starts right after the standard chip8 charset
+    m_I = m_mem->schip8_charset_offset() +  (m_V[x] * 10);
     break;
   case 0x33:
     /*
