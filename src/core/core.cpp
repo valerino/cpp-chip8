@@ -139,9 +139,7 @@ int main(int argc, char **argv) {
   }
 
   // load configuration
-  // TODO: implement configuration options
-  CConfiguration cfg("core.json");
-  cfg.read("{}");
+  CConfiguration::init("core.json","{}");
 
   // load emulator library
   CUIUtils::show_toast_message(MSG_INFO, "loading emulator core: %s\n",

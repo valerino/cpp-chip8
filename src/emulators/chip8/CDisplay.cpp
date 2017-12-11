@@ -6,30 +6,18 @@
 #include "CDisplay.h"
 #include "defs.h"
 
-/**
- * convert screen coordinates to flat buffer offset
- */
-#define SCREEN_TO_FLAT_OFFSET(__x__, __y__, __w__) ((__y__ * __w__) + __x__)
-
-CDisplay::CDisplay(CConfiguration *cfg, CMemory *mem)
-    : m_scale(10.0), m_color(DRAW_COLOR_GREEN), m_mode(MODE_CHIP8), m_cfg{cfg}, m_mem{mem}, m_height{32}, m_width{64}, m_videomem{} {
-
-  if (m_cfg->get<std::string>("mode") == "sc8") {
-    // super chip 8
-    m_height = 64;
-    m_width = 128;
-    m_mode = MODE_SUPERCHIP8;
-  }
+CDisplay::CDisplay(CMemory *mem)
+    : m_scale(10.0), m_color(DRAW_COLOR_GREEN), m_mode(MODE_CHIP8), m_mem{mem}, m_height{CHIP8_HEIGHT}, m_width{CHIP8_WIDTH}, m_videomem{} {
 
   // do we want fullscreen ?
   // TODO: fix appearance
   uint32_t flags = 0;
-  if (m_cfg->get<bool>("fullscreen")) {
+  if (CConfiguration::instance()->get<bool>("display_fullscreen")) {
     flags = SDL_WINDOW_FULLSCREEN;
   }
 
-  // get the wanted pixel draw color
-  if (m_cfg->get<std::string>("draw_color") == "white") {
+  // get the wanted pixel draw color (white or green)
+  if (CConfiguration::instance()->get<std::string>("display_draw_color") == "white") {
     m_color = DRAW_COLOR_WHITE;
   }
   else {
@@ -37,11 +25,12 @@ CDisplay::CDisplay(CConfiguration *cfg, CMemory *mem)
   }
 
   // get the scale to apply
-  m_scale = m_cfg->get<double>("scale");
+  m_scale = CConfiguration::instance()->get<double>("display_scale");
 
   // create the window
+  std::string title = std::string("vue[chip8]: " + m_mem->path());
   m_window =
-      SDL_CreateWindow("Chip8", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+      SDL_CreateWindow(title.data(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                        m_width * m_scale, m_height * m_scale, flags|SDL_WINDOW_OPENGL);
   if (!m_window) {
     // error creating window
@@ -99,15 +88,9 @@ void CDisplay::update() {
   SDL_RenderPresent(m_renderer);
 }
 
-int CDisplay::put_pixel(int x, int y, bool on) {
+void CDisplay::put_pixel(int x, int y, bool on) {
   int pos = SCREEN_TO_FLAT_OFFSET(x, y, m_width);
-  // xor pixel on screen (sprites are xored, so when a pixel is written over
-  // another it's zeroed)
-  bool b = m_videomem[pos] ^ on;
-  m_videomem[pos] = b;
-
-  // and return wether there has been a collision
-  return !((int)b);
+  m_videomem[pos] = m_videomem[pos] ^ on;
 }
 
 bool CDisplay::get_pixel(int x, int y) {
@@ -121,59 +104,67 @@ void CDisplay::scroll_down(int n) {
   }
 
   /*
-   * aaaaaaaaaaaaa  ccccccccccccc
+   * aaaaaaaaaaaaa
    * bbbbbbbbbbbbb  aaaaaaaaaaaaa
    * ccccccccccccc  bbbbbbbbbbbbb
    */
 
-  // we have to scroll down, save n lines from the bottom
-  int to_save = n * m_width;
-  std::vector<bool> saved(m_videomem.end() - to_save, m_videomem.end());
+  // we have to scroll down n lines, clearing n lines on top
+  int pixels = n * m_width;
+  std::vector<bool> cleared(pixels, false);
 
   // copy n to n+1 lines
-  std::copy(m_videomem.begin(), m_videomem.end() - to_save, m_videomem.begin() + to_save);
+  std::copy(m_videomem.begin(), m_videomem.end() - pixels, m_videomem.begin() + pixels);
 
-  // overlap saved lines in the beginning
-  std::copy(saved.begin(), saved.end(), m_videomem.begin());
+  // clear lines on top
+  std::copy(cleared.begin(), cleared.end(), m_videomem.begin());
 }
 
 void CDisplay::scroll_left() {
   /*
-   * aaaabbbbbbbbb  bbbbbbbbbaaaa
-   * aaaabbbbbbbbb  bbbbbbbbbaaaa
-   * aaaabbbbbbbbb  bbbbbbbbbaaaa
+   * aaaabbbbbbbb  bbbbbbbb
+   * aaaabbbbbbbb  bbbbbbbb
+   * aaaabbbbbbbb  bbbbbbbb
    */
+
+  int pixels = 4;
+  if (m_mode == MODE_CHIP8) {
+    // this can be used also in chip 8 mode, just scrolls 2 pixels instead of 4
+    pixels = 2;
+  }
 
   // iterate through every line
   for (int line=0; line < m_height; line++) {
-    // save 4 pixels in the beginning
-    std::vector<bool> saved(m_videomem.begin() + line*m_width, m_videomem.begin() + line*m_width + 4);
+    // shift line n pixels left
+    std::copy(m_videomem.begin() + line*m_width + pixels, m_videomem.begin() + line*m_width - pixels, m_videomem.begin() + line*m_width);
 
-    // shift line 4 pixel left
-    std::copy(m_videomem.begin() + line*m_width + 4, m_videomem.begin() + line*m_width - 4, m_videomem.begin() + line*m_width);
-
-    // overlap saved bytes in the end
-    std::copy(saved.begin(), saved.end(), m_videomem.begin() + line*m_width + m_width - 4);
+    // clear n pixels in the end
+    std::vector<bool> cleared(pixels ,false);
+    std::copy(cleared.begin(), cleared.end(), m_videomem.begin() + line*m_width + m_width - pixels);
   }
 }
 
 void CDisplay::scroll_right() {
   /*
-   * aaaabbbbbbbbb  bbbbaaaabbbbb
-   * aaaabbbbbbbbb  bbbbaaaabbbbb
-   * aaaabbbbbbbbb  bbbbaaaabbbbb
+   * aaaabbbbbbbb      aaaabbbb
+   * aaaabbbbbbbb      aaaabbbb
+   * aaaabbbbbbbb      aaaabbbb
    */
+
+  int pixels = 4;
+  if (m_mode == MODE_CHIP8) {
+    // this can be used also in chip 8 mode, just scrolls 2 pixels instead of 4
+    pixels = 2;
+  }
 
   // iterate through every line
   for (int line=0; line < m_height; line++) {
-    // save 4 pixels in the end
-    std::vector<bool> saved(m_videomem.begin() + line*m_width + m_width - 4, m_videomem.begin() + line*m_width + m_width);
+    // shift line n pixels right
+    std::copy(m_videomem.begin() + line*m_width, m_videomem.begin() + line*m_width + m_width - pixels, m_videomem.begin() + line*m_width + pixels);
 
-    // shift line 4 pixel right
-    std::copy(m_videomem.begin() + line*m_width, m_videomem.begin() + line*m_width + m_width - 4, m_videomem.begin() + line*m_width + 4);
-
-    // overlap saved bytes in the beginning
-    std::copy(saved.begin(), saved.end(), m_videomem.begin() + line*m_width);
+    // clear n pixels in the beginning
+    std::vector<bool> cleared(pixels, false);
+    std::copy(cleared.begin(), cleared.end(), m_videomem.begin() + line*m_width);
   }
 }
 
@@ -181,13 +172,13 @@ void CDisplay::clear() { m_videomem.fill(false); }
 
 void CDisplay::set_mode(int mode) {
   if (mode == MODE_SUPERCHIP8) {
-    m_height = 64;
-    m_width = 128;
+    m_height = SUPER_CHIP8_HEIGHT;
+    m_width = SUPER_CHIP8_WIDTH;
     m_mode = MODE_SUPERCHIP8;
   } else {
     // standard chip8
-    m_height = 32;
-    m_width = 64;
+    m_height = CHIP8_HEIGHT;
+    m_width = CHIP8_WIDTH;
     m_mode = MODE_CHIP8;
   }
 
@@ -198,11 +189,9 @@ void CDisplay::set_mode(int mode) {
   SDL_SetWindowPosition(m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 }
 
-int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
-  // Dxyn - DRW Vx, Vy, nibble
-
+bool CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
   const uint8_t *ptr = s;
-  int collision = 0;
+  bool collision = false;
   if (len == 0 && m_mode==MODE_SUPERCHIP8) {
     // super chip8 mode, draw 16x16 sprite (32 bytes), each line is 2 bytes (16 bit)
     for (int i = 0; i < 16; i++) {
@@ -212,23 +201,16 @@ int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
       // draw 16 bit line pixel per pixel
       for (int j = 0; j < 16; j++) {
         // handle overlapping
-        int xx = x + j;
-        if (xx > m_width) {
-          xx = xx - m_width;
-        }
-
-        int yy = y + i;
-        if (yy > m_height) {
-          yy = yy - m_height;
-        }
+        int xx = (x + j) % m_width;
+        int yy = (y + i) % m_height;
 
         if (line & (0x8000 >> j)) {
           // bit is set, lit pixel at coordinates
-          if (put_pixel(xx, yy, true)) {
-            // if it was on before (pixel is xored on screen), there was a
-            // collision
-            collision++;
+          if (get_pixel(xx,yy) == true) {
+            // set collision
+            collision = true;
           }
+          put_pixel(xx, yy, true);
         } else {
           // clear the pixel
           put_pixel(xx, yy, false);
@@ -246,22 +228,16 @@ int CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
       // draw 8 bit line pixel per pixel
       for (int j = 0; j < 8; j++) {
         // handle overlapping
-        int xx = x + j;
-        if (xx > m_width) {
-          xx = xx - m_width;
-        }
-        int yy = y + i;
-        if (yy > m_height) {
-          yy = yy - m_height;
-        }
+        int xx = (x + j) % m_width;
+        int yy = (y + i) % m_height;
 
         if (b & (0x80 >> j)) {
           // bit is set, lit pixel at coordinates
-          if (put_pixel(xx, yy, true)) {
-            // if it was on before (pixel is xored on screen), there was a
-            // collision
-            collision++;
+          if (get_pixel(xx,yy) == true) {
+            // set collision
+            collision = true;
           }
+          put_pixel(xx, yy, true);
         } else {
           // clear the pixel
           put_pixel(xx, yy, false);

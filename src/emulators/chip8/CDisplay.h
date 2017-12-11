@@ -14,6 +14,18 @@
 #define DRAW_COLOR_WHITE 0
 #define DRAW_COLOR_GREEN 1
 
+/*
+ * display height/width for standard chip8
+ */
+#define CHIP8_WIDTH 64
+#define CHIP8_HEIGHT 32
+
+/*
+ * display height/width for super-chip8
+ */
+#define SUPER_CHIP8_WIDTH 128
+#define SUPER_CHIP8_HEIGHT 64
+
 /**
  * implements the display subsystem
  */
@@ -21,11 +33,10 @@ class CDisplay {
 public:
   /**
    * initializes the display
-   * @param cfg the configuration instance
    * @param mem represents emulated memory
    * @throws if SDL fails
    */
-  CDisplay(CConfiguration *cfg, CMemory *mem);
+  CDisplay(CMemory *mem);
   ~CDisplay();
 
   /**
@@ -38,9 +49,9 @@ public:
    * @param x
    * @param y
    * @param on true to lit the pixel, false to unlit
-   * @return 1 if the pixel was set and is overwritten (=collision)
+   * @return
    */
-  int put_pixel(int x, int y, bool on);
+  void put_pixel(int x, int y, bool on);
 
   /**
    * get a pixel from screen coordinates
@@ -56,9 +67,9 @@ public:
    * @param len buffer size
    * @param x
    * @param y
-   * @return 0 if no collision
+   * @return false if no collision
    */
-  int draw_sprite(const uint8_t *s, int len, int x, int y);
+  bool draw_sprite(const uint8_t *s, int len, int x, int y);
 
   /**
    * scroll down N lines
@@ -83,12 +94,11 @@ public:
 
   /**
    * dynamically set mode via the HIGH/LOW instruction from the cpu
-   * @param mode one of the modes defined in defs.h (MODE_CHIP8, MODE_SUPERCHIP8, MODE_ETI660)
+   * @param mode one of the modes defined in defs.h (MODE_CHIP8, MODE_SUPERCHIP8)
    */
   void set_mode(int mode);
 
 private:
-  CConfiguration *m_cfg;
   int m_width;
   int m_height;
   int m_mode;
@@ -97,7 +107,6 @@ private:
   SDL_Renderer *m_renderer;
   SDL_Window *m_window;
   CMemory *m_mem;
-  uint8_t m_videoMem[64*128];
   std::array<bool, 64 * 128> m_videomem;
 };
 

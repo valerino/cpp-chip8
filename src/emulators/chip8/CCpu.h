@@ -11,9 +11,10 @@
 #include "CSound.h"
 #include <CConfiguration.h>
 /*
- * docs taken from
+ * cpu implemented using documentation found here:
  * http://devernay.free.fr/hacks/chip8/C8TECH10.HTM (chip8 only)
  * https://github.com/trapexit/chip-8_documentation/blob/master/Misc/SCHIP-8%20v1.1.txt
+ * http://www.pong-story.com/chip8/ (download the chip8 emulator, docs are in the .zip)
  */
 
 #define ERROR_INVALID_OPCODE -2
@@ -24,14 +25,12 @@ class CCpu {
 public:
   /**
    * initializes the cpu
-   * @param cfg CConfiguration instance
    * @param mem represents emulated memory
    * @param display represents emulated display
    * @param input represents emulated input
    * @param sound represents emulated sound hw
    */
-  CCpu(CConfiguration *cfg, CMemory *mem, CDisplay *display, CInput *input,
-       CSound *sound);
+  CCpu(CMemory *mem, CDisplay *display, CInput *input, CSound *sound);
   ~CCpu();
 
   /**
@@ -48,12 +47,17 @@ public:
   bool update_display();
 
   /**
+   * returns MODE_CHIP8 or MODE_SUPERCHIP8, depending on the current cpu mode
+   * @return
+   */
+  uint8_t mode() { return m_mode; }
+
+  /**
    * update the delay and sound timers
    */
   void updateTimers();
 
 private:
-  CConfiguration *m_cfg;
   int m_mode;
   CMemory *m_mem;
   CInput *m_input;

@@ -8,15 +8,31 @@
 #include "CConfiguration.h"
 #include "CDbg.h"
 
-CConfiguration::CConfiguration(const char *path) {
-  m_path = std::string(path);
+CConfiguration* CConfiguration::g_instance = NULL;
+
+CConfiguration::CConfiguration(const char *path, const char *def) {
+  m_path = path;
   m_j = {};
+
+  // read
+  read(def ? def : "{}");
 }
 
-int CConfiguration::read(const char *def) {
+CConfiguration *CConfiguration::init(const char *path, const char *def) {
+  if (g_instance) {
+    return instance();
+  }
+  g_instance = new CConfiguration(path, def);
+  return g_instance;
+}
+
+CConfiguration *CConfiguration::instance() {
+  return g_instance;
+}
+
+void CConfiguration::read(const char *def) {
   try {
     read();
-    CDbg::notify("read configuration: %s\n", path());
   } catch (std::system_error &e) {
     if (e.code().value() == ENOENT) {
       // initialize default configuration
@@ -26,19 +42,15 @@ int CConfiguration::read(const char *def) {
 
       // and create file
       if (CFile::from_buffer(path(), (uint8_t *)def, strlen(def)) != 0) {
-        CDbg::error("cannot write default configuration: %s\n", path());
-        return EACCES;
+        throw std::system_error(EACCES, std::generic_category(), std::string("can't write configuration file: ") + path());
       }
 
       // read back
       read();
     }
   } catch (json::exception &e) {
-    CDbg::error("error parsing configuration: %s, %s\n", path(), e.what());
-    return EINVAL;
+    throw std::system_error(EINVAL, std::generic_category(),  std::string("error parsing configuration: ") + path());
   }
-
-  return 0;
 }
 
 void CConfiguration::read() {

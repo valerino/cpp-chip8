@@ -20,11 +20,10 @@ class CMemory {
 public:
   /**
    * initializes memory subsystem
-   * @param cfg CConfiguration instance
    * @param rom_path path to the rom file
    * @throws std::system_error(ENOENT) when not found
    */
-  CMemory(CConfiguration* cfg, const char *rom_path);
+  CMemory(const char *rom_path);
 
   /**
    * get 16 bit from memory, big endian
@@ -70,10 +69,22 @@ public:
   void put_bytes(uint16_t address, std::vector<uint8_t> b);
 
   /**
+   * get path to the rom file the memory has been initialized with
+   * @return
+   */
+  std::string path() { return m_path; }
+
+  /**
    * returns start offset of the super-chip8 charset
    * @return
    */
   uint16_t schip8_charset_offset();
+
+  /**
+   * check if we're running in eti-660 mode (different start address)
+   * @return
+   */
+  bool is_eti660() { return m_eti660; }
 
   /**
    * access to underlying buffer
@@ -83,6 +94,8 @@ public:
   ~CMemory();
 
 private:
+  bool m_eti660;
+  std::string m_path;
   uint8_t *m_mem;
 };
 

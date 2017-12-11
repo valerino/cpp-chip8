@@ -6,20 +6,15 @@
 #include "CCpu.h"
 #include "defs.h"
 
-CCpu::CCpu(CConfiguration *cfg, CMemory *mem, CDisplay *display, CInput *input,
+CCpu::CCpu(CMemory *mem, CDisplay *display, CInput *input,
            CSound *sound)
-    : m_cfg{cfg}, m_mem{mem}, m_display{display}, m_input{input},
-      m_sound(sound),  m_I{0}, m_V{}, m_T{0}, m_D{0}, m_PC{CHIP8_START_ADDRESS},
+    : m_mem{mem}, m_display{display}, m_input{input},
+      m_sound(sound), m_I{0}, m_V{}, m_T{0}, m_D{0}, m_PC{CHIP8_START_ADDRESS},
       m_stack{}, m_flags{}, m_SP{0}, m_mode{MODE_CHIP8} {
 
-  if (cfg->get<std::string>("mode") == "eti660") {
+  if (m_mem->is_eti660()) {
     // different start address
     m_PC = ETI660_START_ADDRESS;
-    m_mode=MODE_ETI660;
-  }
-  else if (cfg->get<std::string>("mode") == "sc8") {
-    // super chip8
-    m_mode = MODE_SUPERCHIP8;
   }
 
   // initializes the random number generator
@@ -27,10 +22,10 @@ CCpu::CCpu(CConfiguration *cfg, CMemory *mem, CDisplay *display, CInput *input,
 
   // map decoders for each opcode category
   m_decoders = {
-      {0, &CCpu::decode_0},   {1, &CCpu::decode_1},   {2, &CCpu::decode_2},
-      {3, &CCpu::decode_3},   {4, &CCpu::decode_4},   {5, &CCpu::decode_5},
-      {6, &CCpu::decode_6},   {7, &CCpu::decode_7},   {8, &CCpu::decode_8},
-      {9, &CCpu::decode_9},   {0xa, &CCpu::decode_A}, {0xb, &CCpu::decode_B},
+      {0, &CCpu::decode_0}, {1, &CCpu::decode_1}, {2, &CCpu::decode_2},
+      {3, &CCpu::decode_3}, {4, &CCpu::decode_4}, {5, &CCpu::decode_5},
+      {6, &CCpu::decode_6}, {7, &CCpu::decode_7}, {8, &CCpu::decode_8},
+      {9, &CCpu::decode_9}, {0xa, &CCpu::decode_A}, {0xb, &CCpu::decode_B},
       {0xc, &CCpu::decode_C}, {0xd, &CCpu::decode_D}, {0xe, &CCpu::decode_E},
       {0xf, &CCpu::decode_F},
   };
@@ -138,7 +133,7 @@ int CCpu::decode_0(uint16_t addr) {
      * 00FD*    Exit CHIP interpreter (super chip8)
      */
     CDbg::verbose("EXIT");
-    res = -2;
+    res = ERROR_EXIT_OPCODE;
     break;
 
   case 0xfe:
@@ -367,11 +362,11 @@ int CCpu::decode_8(uint16_t addr) {
     /*
       8xy5 - SUB Vx, Vy
       Set Vx = Vx - Vy, set VF = NOT borrow
-      If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from
+      If Vx >= Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from
       Vx, and the results stored in Vx.
      */
     CDbg::verbose("SUB V%x, V%x", x, y);
-    if (m_V[x] > m_V[y]) {
+    if (m_V[x] >= m_V[y]) {
       // set carry flag
       m_V[0xf] = 1;
     } else {
@@ -402,11 +397,11 @@ int CCpu::decode_8(uint16_t addr) {
     /*
       8xy7 - SUBN Vx, Vy
       Set Vx = Vy - Vx, set VF = NOT borrow
-      If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from
+      If Vy >= Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from
       Vy, and the results stored in Vx.
     */
     CDbg::verbose("SUBN V%x, V%x", x, y);
-    if (m_V[y] > m_V[x]) {
+    if (m_V[y] >= m_V[x]) {
       // set carry flag
       m_V[0xf] = 1;
     } else {
@@ -519,6 +514,10 @@ int CCpu::decode_D(uint16_t addr) {
     information on XOR, and section 2.4, Display, for more information on the
     Chip-8 screen and sprites.
   */
+
+  // reset the carry flag first
+  m_V[0xf] = 0;
+
   uint8_t x = (addr & 0xf00) >> 8;
   uint8_t y = (addr & 0x0f0) >> 4;
   uint8_t n = addr & 0x00f;
@@ -533,14 +532,11 @@ int CCpu::decode_D(uint16_t addr) {
   std::vector<uint8_t> sprite = m_mem->get_bytes(m_I, bytes_to_fetch);
 
   // draw
-  int collision =
+  bool collision =
       m_display->draw_sprite(sprite.data(), n, m_V[x], m_V[y]);
   if (collision) {
-    // set flag
+    // set carry flag
     m_V[0xf] = 1;
-  } else {
-    // unset flag
-    m_V[0xf] = 0;
   }
   m_update_display = true;
   return sizeof(uint16_t);
@@ -581,8 +577,7 @@ int CCpu::decode_E(uint16_t addr) {
       m_PC += sizeof(uint16_t);
     }
     break;
-  default:
-    res = ERROR_INVALID_OPCODE;
+  default:res = ERROR_INVALID_OPCODE;
     break;
   }
   return res;
@@ -592,7 +587,7 @@ int CCpu::decode_F(uint16_t addr) {
   uint8_t x = (addr & 0xf00) >> 8;
   uint8_t kk = (addr & 0x0ff);
   int res = sizeof(uint16_t);
-  int idx = -1;
+  int idx = ERROR_INVALID_OPCODE;
 
   switch (kk) {
   case 0x07:
@@ -618,8 +613,7 @@ int CCpu::decode_F(uint16_t addr) {
     if (idx == -1) {
       // will keep the same PC
       res = 0;
-    }
-    else {
+    } else {
       // key has been pressed
       m_V[x] = idx;
     }
@@ -675,7 +669,7 @@ int CCpu::decode_F(uint16_t addr) {
     CDbg::verbose("LD FX, V%x", x);
     // extended istruction, get font sprite at v[x], each sprite is 10 byte,
     // charset starts right after the standard chip8 charset
-    m_I = m_mem->schip8_charset_offset() +  (m_V[x] * 10);
+    m_I = m_mem->schip8_charset_offset() + (m_V[x] * 10);
     break;
   case 0x33:
     /*
@@ -741,8 +735,7 @@ int CCpu::decode_F(uint16_t addr) {
     }
     break;
 
-  default:
-    res = ERROR_INVALID_OPCODE;
+  default:res = ERROR_INVALID_OPCODE;
     break;
   }
   return res;
@@ -762,8 +755,7 @@ void CCpu::updateTimers() {
 
     // update sound timer
     m_T--;
-  }
-  else {
+  } else {
     // timer is 0, stop beeping
     m_sound->beep(false);
   }

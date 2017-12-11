@@ -6,6 +6,7 @@
 #include <assert.h>
 #include "CMemory.h"
 #include "CFile.h"
+#include "CConfiguration.h"
 
 /*
  * standard chip8 fonts
@@ -51,9 +52,8 @@ uint8_t g_schip8_fonts[] =  {
     0x7E , 0x7E , 0x60 , 0x60 , 0x7C , 0x7C , 0x60 , 0x60 , 0x60 , 0x60
 };
 
-CMemory::CMemory(CConfiguration *cfg,
-                 const char *rom_path)
-    : m_mem{NULL} {
+CMemory::CMemory(const char *rom_path)
+    : m_mem{NULL}, m_eti660{false}, m_path{std::string(rom_path)} {
 
   // allocate memory (4kb)
   m_mem = (uint8_t *)CMem::alloc(CHIP8_MEMORY_SIZE);
@@ -70,16 +70,14 @@ CMemory::CMemory(CConfiguration *cfg,
   }
   assert(game_size <= (CHIP8_MEMORY_SIZE - INTERPRETER_MAX_SIZE));
 
-
   // charsets starts at 0, first chip8 then superchip8 (0x200 free space)
   // this is up to the developer where to store the charset, btw.
   memcpy(m_mem, g_chip8_fonts, sizeof(g_chip8_fonts));
   memcpy(m_mem+sizeof(g_chip8_fonts), g_schip8_fonts, sizeof(g_schip8_fonts));
 
-  // copy game rom
-  uint8_t *start_address =
-      (cfg->get<std::string>("mode") == "eti660" ? m_mem + ETI660_START_ADDRESS
-                                                 : m_mem + CHIP8_START_ADDRESS);
+  // copy game rom (check for eti-660 mode)
+  m_eti660= CConfiguration::instance()->get<bool>("mode_eti660");
+  uint8_t *start_address =(m_eti660 ? m_mem + ETI660_START_ADDRESS : m_mem + CHIP8_START_ADDRESS);
   memcpy(start_address, game, game_size);
 
   CMem::free(game);

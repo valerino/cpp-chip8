@@ -30,6 +30,7 @@ public:
 
 private:
   std::array<bool, 16> m_keypad;
+  std::array<SDL_Scancode, 16> m_keymap;
 };
 
 #endif // PROJECT_CINPUT_H

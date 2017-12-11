@@ -25,5 +25,9 @@ public:
   static int SDLPollEvents(uint8_t** keys);
 };
 
+/**
+ * convert screen coordinates to flat buffer offset
+ */
+#define SCREEN_TO_FLAT_OFFSET(__x__, __y__, __w__) ((__y__ * __w__) + __x__)
 
 #endif // PROJECT_CSDLUTILS_H

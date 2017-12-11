@@ -12,32 +12,49 @@ using nlohmann::json;
  * handles configuration, json format
  */
 class CConfiguration {
+protected:
+  /**
+   * use static init() !
+   * @param path path to the configuration file, will be created if not existing
+   * @param def default configuration json, or NULL
+   */
+  CConfiguration(const char *path, const char* def = NULL);
+
+  /**
+   * use static init() !
+   * @throws std::system_error
+   * @throws json::exception
+   */
+  void read();
+
+  /**
+   * use static init() !
+   * @param def a default configuration JSON string, configuration will be created if not existing
+   * @throws json::exception on parse error
+   */
+  void read(const char *def);
+
 public:
   /**
-   * initializes configuration. call read() then.
-   * @param path path to the configuration JSON file
+   * initializes the configuration
+   * @param path path to the configuration file, will be created if not existing
+   * @throws std::system_error
+   * @throws json::exception
+   * @return CConfiguration* singleton
    */
-  CConfiguration(const char *path);
+  static CConfiguration* init (const char* path, const char* def = NULL);
+
+  /**
+   * singleton, call init() once, then access configuration through instance() elsewhere!
+   * @return
+   */
+  static CConfiguration* instance();
 
   /**
    * write back the configuration
    * @return 0 on success
    */
   int write();
-
-  /**
-   * read configuration
-   * @throws std::system_error(ENOENT) when not found
-   * @throws json::exception on parse error
-   */
-  void read();
-
-  /**
-   * read configuration or initialize with default if not found
-   * @param def a default configuration JSON string
-   * @return 0 on success
-   */
-  int read(const char *def);
 
   /**
    * check if the configuration is empty
@@ -77,6 +94,7 @@ public:
   ~CConfiguration();
 
 private:
+  static CConfiguration* g_instance;
   std::string m_path;
   json m_j;
 };
