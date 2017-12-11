@@ -1,4 +1,7 @@
 {
+    // verbose debug messages (slow, default is off!)
+    "dbg_verbose":true,
+
     // override default speed (600hz for chip8, 1200hz for super-chip8)
     "speed_hz_override": 2000,
 

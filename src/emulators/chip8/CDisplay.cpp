@@ -67,7 +67,7 @@ void CDisplay::update() {
     for (int y = 0; y < m_height; y++) {
       // is the pixel set ?
       bool is_on = get_pixel(x, y);
-      if (is_on == true) {
+      if (is_on) {
         // pixel is on
         if (m_color == DRAW_COLOR_WHITE) {
           SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
@@ -133,14 +133,16 @@ void CDisplay::scroll_left() {
     pixels = 2;
   }
 
-  // iterate through every line
-  for (int line=0; line < m_height; line++) {
-    // shift line n pixels left
-    std::copy(m_videomem.begin() + line*m_width + pixels, m_videomem.begin() + line*m_width - pixels, m_videomem.begin() + line*m_width);
-
-    // clear n pixels in the end
-    std::vector<bool> cleared(pixels ,false);
-    std::copy(cleared.begin(), cleared.end(), m_videomem.begin() + line*m_width + m_width - pixels);
+  // scroll all screen n pixels left (no overlap on the other side)
+  for (int y=0; y<m_height; y++) {
+    for (int x = 0; x < m_width; x++) {
+      int xx = SCREEN_TO_FLAT_OFFSET(x,y,m_width);
+      if (x < (m_width-pixels)) {
+        m_videomem[xx]=m_videomem[xx+pixels];
+      } else {
+        m_videomem[xx]=false;
+      }
+    }
   }
 }
 
@@ -157,14 +159,16 @@ void CDisplay::scroll_right() {
     pixels = 2;
   }
 
-  // iterate through every line
-  for (int line=0; line < m_height; line++) {
-    // shift line n pixels right
-    std::copy(m_videomem.begin() + line*m_width, m_videomem.begin() + line*m_width + m_width - pixels, m_videomem.begin() + line*m_width + pixels);
-
-    // clear n pixels in the beginning
-    std::vector<bool> cleared(pixels, false);
-    std::copy(cleared.begin(), cleared.end(), m_videomem.begin() + line*m_width);
+  // scroll all screen n pixels right (no overlap on the other side)
+  for (int y=0; y<m_height; y++) {
+    for (int x = m_width; x > 0; x--) {
+      int xx = SCREEN_TO_FLAT_OFFSET(x,y,m_width);
+      if (x > pixels) {
+        m_videomem[xx]=m_videomem[xx-pixels];
+      } else {
+        m_videomem[xx]=false;
+      }
+    }
   }
 }
 
@@ -203,7 +207,6 @@ bool CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
         // handle overlapping
         int xx = (x + j) % m_width;
         int yy = (y + i) % m_height;
-
         if (line & (0x8000 >> j)) {
           // bit is set, lit pixel at coordinates
           if (get_pixel(xx,yy) == true) {
@@ -229,6 +232,15 @@ bool CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
       for (int j = 0; j < 8; j++) {
         // handle overlapping
         int xx = (x + j) % m_width;
+
+        // HACK: fixes 'blitz' rom
+        if (strcasestr(m_mem->path().data(),"blitz")) {
+          // there's a bug in 'blitz' which causes the plane to
+          // crash in the beginning since y overlaps!
+          if (y+i == m_height) {
+            return false;
+          }
+        }
         int yy = (y + i) % m_height;
 
         if (b & (0x80 >> j)) {

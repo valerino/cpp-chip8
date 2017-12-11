@@ -80,6 +80,11 @@ int CEmuChip8::start(const char *rom_path) {
       "}";
   CConfiguration::init("emulators/chip8/chip8.json", default_cfg);
 
+  // disable debug prints
+  if (CConfiguration::instance()->get<bool>("dbg_verbose")) {
+    CDbg::set_debug_level(DBG_VERBOSE);
+  }
+
   // initialize SDL
   int res = SDL_Init(SDL_INIT_EVERYTHING);
   if (res != 0) {
@@ -136,11 +141,11 @@ int CEmuChip8::start(const char *rom_path) {
       // chip8 or super-chip8
       if (m_cpu->mode() == MODE_CHIP8) {
         // super chip8 runs at about 600hz
-        hz = 600;
+        hz = 500;
       }
       else {
         // super chip8 runs at about 1200hz
-        hz = 1600;
+        hz = 1000;
       }
     }
 

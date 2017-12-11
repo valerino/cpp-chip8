@@ -80,6 +80,8 @@ CMemory::CMemory(const char *rom_path)
   uint8_t *start_address =(m_eti660 ? m_mem + ETI660_START_ADDRESS : m_mem + CHIP8_START_ADDRESS);
   memcpy(start_address, game, game_size);
 
+  // done
+  CDbg::notify("loaded: %s", rom_path);
   CMem::free(game);
 }
 

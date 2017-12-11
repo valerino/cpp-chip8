@@ -362,11 +362,11 @@ int CCpu::decode_8(uint16_t addr) {
     /*
       8xy5 - SUB Vx, Vy
       Set Vx = Vx - Vy, set VF = NOT borrow
-      If Vx >= Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from
+      If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from
       Vx, and the results stored in Vx.
      */
     CDbg::verbose("SUB V%x, V%x", x, y);
-    if (m_V[x] >= m_V[y]) {
+    if (m_V[x] > m_V[y]) {
       // set carry flag
       m_V[0xf] = 1;
     } else {
@@ -397,11 +397,11 @@ int CCpu::decode_8(uint16_t addr) {
     /*
       8xy7 - SUBN Vx, Vy
       Set Vx = Vy - Vx, set VF = NOT borrow
-      If Vy >= Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from
+      If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from
       Vy, and the results stored in Vx.
     */
     CDbg::verbose("SUBN V%x, V%x", x, y);
-    if (m_V[y] >= m_V[x]) {
+    if (m_V[y] > m_V[x]) {
       // set carry flag
       m_V[0xf] = 1;
     } else {
@@ -700,7 +700,6 @@ int CCpu::decode_F(uint16_t addr) {
     for (int i = 0; i <= x; i++) {
       m_mem->put_byte(m_I + i, m_V[i]);
     }
-    // m_I+=x + 1;
     break;
   case 0x65:
     /*
@@ -714,7 +713,6 @@ int CCpu::decode_F(uint16_t addr) {
     for (int i = 0; i <= x; i++) {
       m_V[i] = m_mem->get_byte(m_I + i);
     }
-    // m_I+=x + 1;
     break;
   case 0x75:
     /*
