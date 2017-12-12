@@ -218,42 +218,63 @@ bool CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
       ptr += 2;
     }
   } else {
-    // chip8 mode
-    // draw 8*len sprite, to implement half-pixel drawing we render 4-pixels per pixel
-    // (to accomodate chip8->super-chip8 resolution)
-    for (int i = 0; i < len; i++) {
-      // get sprite byte
-      uint8_t b = ptr[i];
-
-      // draw 8 bit line pixel per pixel
-      for (int j = 0; j < 8; j++) {
-        //if (x + j < m_width/2 && y + i < m_height/2) {
-        int xx = (x + j) % m_width;
-        int yy = (y + i) % m_height;
-        if (b & (0x80 >> j)) {
-          // bit is set, lit pixel at coordinates
-          if (get_pixel(xx * 2, yy * 2) == true ||
-              get_pixel(xx * 2, yy * 2 + 1) == true ||
-              get_pixel(xx * 2 + 1, yy * 2) == true ||
-              get_pixel(xx * 2 + 1, yy * 2 + 1) == true) {
-            // set collision
-            collision = true;
+    if (m_mode == MODE_CHIP8) {
+      // draw an 8*len (w*h) sprite in chip8 mode, every pixel is doubled since
+      // we render in super-chip8 mode always to easily obtain half-pixel
+      for (int i = 0; i < len; i++) {
+        // get sprite byte
+        uint8_t b = ptr[i];
+        // draw 8 bit line pixel per pixel
+        for (int j = 0; j < 8; j++) {
+          //if (x + j < m_width/2 && y + i < m_height/2) {
+          int xx = (x + j) % m_width;
+          int yy = (y + i) % m_height;
+          if (b & (0x80 >> j)) {
+            // bit is set, lit pixel at coordinates
+            if (get_pixel(xx * 2, yy * 2) == true ||
+                get_pixel(xx * 2, yy * 2 + 1) == true ||
+                get_pixel(xx * 2 + 1, yy * 2) == true ||
+                get_pixel(xx * 2 + 1, yy * 2 + 1) == true) {
+              // set collision
+              collision = true;
+            }
+            put_pixel(xx * 2, yy * 2, true);
+            put_pixel(xx * 2, yy * 2 + 1, true);
+            put_pixel(xx * 2 + 1, yy * 2, true);
+            put_pixel(xx * 2 + 1, yy * 2 + 1, true);
+          } else {
+            // clear the pixel
+            put_pixel(xx * 2, yy * 2, false);
+            put_pixel(xx * 2, yy * 2 + 1, false);
+            put_pixel(xx * 2 + 1, yy * 2, false);
+            put_pixel(xx * 2 + 1, yy * 2 + 1, false);
           }
-          put_pixel(xx * 2, yy * 2, true);
-          put_pixel(xx * 2, yy * 2 + 1, true);
-          put_pixel(xx * 2 + 1, yy * 2, true);
-          put_pixel(xx * 2 + 1, yy * 2 + 1, true);
-        } else {
-          // clear the pixel
-          put_pixel(xx * 2, yy * 2, false);
-          put_pixel(xx * 2, yy * 2 + 1, false);
-          put_pixel(xx * 2 + 1, yy * 2, false);
-          put_pixel(xx * 2 + 1, yy * 2 + 1, false);
         }
-        //}
+      }
+    } else {
+      // draw an 8*len (w*h) sprite in super-chip8 mode
+      for (int i = 0; i < len; i++) {
+        // get sprite byte
+        uint8_t b = ptr[i];
+        // draw 8 bit line pixel per pixel
+        for (int j = 0; j < 8; j++) {
+          //if (x + j < m_width/2 && y + i < m_height/2) {
+          int xx = (x + j) % m_width;
+          int yy = (y + i) % m_height;
+          if (b & (0x80 >> j)) {
+            // bit is set, lit pixel at coordinates
+            if (get_pixel(xx, yy) == true) {
+              // set collision
+              collision = true;
+            }
+            put_pixel(xx, yy, true);
+          } else {
+            // clear the pixel
+            put_pixel(xx, yy, false);
+          }
+        }
       }
     }
   }
-
   return collision;
 }
