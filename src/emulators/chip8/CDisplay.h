@@ -15,16 +15,10 @@
 #define DRAW_COLOR_GREEN 1
 
 /*
- * display height/width for standard chip8
+ * display height/width (chip8=64*32, super-chip8=128*64, we always render super-chip8 to implement half-pixel)
  */
-#define CHIP8_WIDTH 64
-#define CHIP8_HEIGHT 32
-
-/*
- * display height/width for super-chip8
- */
-#define SUPER_CHIP8_WIDTH 128
-#define SUPER_CHIP8_HEIGHT 64
+#define CHIP8_WIDTH 128
+#define CHIP8_HEIGHT 64
 
 /**
  * implements the display subsystem

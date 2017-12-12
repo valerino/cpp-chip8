@@ -7,7 +7,8 @@
 #include "defs.h"
 
 CDisplay::CDisplay(CMemory *mem)
-    : m_scale(10.0), m_color(DRAW_COLOR_GREEN), m_mode(MODE_CHIP8), m_mem{mem}, m_height{CHIP8_HEIGHT}, m_width{CHIP8_WIDTH}, m_videomem{} {
+    : m_scale(10.0), m_color(DRAW_COLOR_GREEN), m_mode(MODE_CHIP8), m_mem{mem}, m_height{CHIP8_HEIGHT},
+      m_width{CHIP8_WIDTH}, m_videomem{} {
 
   // do we want fullscreen ?
   // TODO: fix appearance
@@ -19,8 +20,7 @@ CDisplay::CDisplay(CMemory *mem)
   // get the wanted pixel draw color (white or green)
   if (CConfiguration::instance()->get<std::string>("display_draw_color") == "white") {
     m_color = DRAW_COLOR_WHITE;
-  }
-  else {
+  } else {
     m_color = DRAW_COLOR_GREEN;
   }
 
@@ -31,10 +31,10 @@ CDisplay::CDisplay(CMemory *mem)
   std::string title = std::string("vue[chip8]: " + m_mem->path());
   m_window =
       SDL_CreateWindow(title.data(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                       m_width * m_scale, m_height * m_scale, flags|SDL_WINDOW_OPENGL);
+                       m_width * m_scale, m_height * m_scale, flags | SDL_WINDOW_OPENGL);
   if (!m_window) {
     // error creating window
-    const char* msg = SDL_GetError();
+    const char *msg = SDL_GetError();
     throw std::runtime_error(msg);
   }
 
@@ -71,8 +71,7 @@ void CDisplay::update() {
         // pixel is on
         if (m_color == DRAW_COLOR_WHITE) {
           SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-        }
-        else {
+        } else {
           // green
           SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
         }
@@ -134,13 +133,13 @@ void CDisplay::scroll_left() {
   }
 
   // scroll all screen n pixels left (no overlap on the other side)
-  for (int y=0; y<m_height; y++) {
+  for (int y = 0; y < m_height; y++) {
     for (int x = 0; x < m_width; x++) {
-      int xx = SCREEN_TO_FLAT_OFFSET(x,y,m_width);
-      if (x < (m_width-pixels)) {
-        m_videomem[xx]=m_videomem[xx+pixels];
+      int xx = SCREEN_TO_FLAT_OFFSET(x, y, m_width);
+      if (x < (m_width - pixels)) {
+        m_videomem[xx] = m_videomem[xx + pixels];
       } else {
-        m_videomem[xx]=false;
+        m_videomem[xx] = false;
       }
     }
   }
@@ -160,13 +159,13 @@ void CDisplay::scroll_right() {
   }
 
   // scroll all screen n pixels right (no overlap on the other side)
-  for (int y=0; y<m_height; y++) {
+  for (int y = 0; y < m_height; y++) {
     for (int x = m_width; x > 0; x--) {
-      int xx = SCREEN_TO_FLAT_OFFSET(x,y,m_width);
+      int xx = SCREEN_TO_FLAT_OFFSET(x, y, m_width);
       if (x > pixels) {
-        m_videomem[xx]=m_videomem[xx-pixels];
+        m_videomem[xx] = m_videomem[xx - pixels];
       } else {
-        m_videomem[xx]=false;
+        m_videomem[xx] = false;
       }
     }
   }
@@ -176,13 +175,9 @@ void CDisplay::clear() { m_videomem.fill(false); }
 
 void CDisplay::set_mode(int mode) {
   if (mode == MODE_SUPERCHIP8) {
-    m_height = SUPER_CHIP8_HEIGHT;
-    m_width = SUPER_CHIP8_WIDTH;
     m_mode = MODE_SUPERCHIP8;
   } else {
     // standard chip8
-    m_height = CHIP8_HEIGHT;
-    m_width = CHIP8_WIDTH;
     m_mode = MODE_CHIP8;
   }
 
@@ -196,20 +191,19 @@ void CDisplay::set_mode(int mode) {
 bool CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
   const uint8_t *ptr = s;
   bool collision = false;
-  if (len == 0 && m_mode==MODE_SUPERCHIP8) {
+  if (len == 0 && m_mode == MODE_SUPERCHIP8) {
     // super chip8 mode, draw 16x16 sprite (32 bytes), each line is 2 bytes (16 bit)
     for (int i = 0; i < 16; i++) {
       // get sprite line
       uint16_t line = (ptr[0] << 8) | ptr[1];
-
       // draw 16 bit line pixel per pixel
       for (int j = 0; j < 16; j++) {
-        // handle overlapping
+        //if (x+j < m_width && y+i < m_height) {
         int xx = (x + j) % m_width;
         int yy = (y + i) % m_height;
         if (line & (0x8000 >> j)) {
           // bit is set, lit pixel at coordinates
-          if (get_pixel(xx,yy) == true) {
+          if (get_pixel(xx, yy) == true) {
             // set collision
             collision = true;
           }
@@ -219,43 +213,47 @@ bool CDisplay::draw_sprite(const uint8_t *s, int len, int x, int y) {
           put_pixel(xx, yy, false);
         }
       }
+      //}
       // next line
-      ptr+=2;
+      ptr += 2;
     }
   } else {
-    // draw 8*len sprite
+    // chip8 mode
+    // draw 8*len sprite, to implement half-pixel drawing we render 4-pixels per pixel
+    // (to accomodate chip8->super-chip8 resolution)
     for (int i = 0; i < len; i++) {
       // get sprite byte
       uint8_t b = ptr[i];
 
       // draw 8 bit line pixel per pixel
       for (int j = 0; j < 8; j++) {
-        // handle overlapping
+        //if (x + j < m_width/2 && y + i < m_height/2) {
         int xx = (x + j) % m_width;
-
-        // HACK: fixes 'blitz' rom
-        if (strcasestr(m_mem->path().data(),"blitz")) {
-          // there's a bug in 'blitz' which causes the plane to
-          // crash in the beginning since y overlaps!
-          if (y+i == m_height) {
-            return false;
-          }
-        }
         int yy = (y + i) % m_height;
-
         if (b & (0x80 >> j)) {
           // bit is set, lit pixel at coordinates
-          if (get_pixel(xx,yy) == true) {
+          if (get_pixel(xx * 2, yy * 2) == true ||
+              get_pixel(xx * 2, yy * 2 + 1) == true ||
+              get_pixel(xx * 2 + 1, yy * 2) == true ||
+              get_pixel(xx * 2 + 1, yy * 2 + 1) == true) {
             // set collision
             collision = true;
           }
-          put_pixel(xx, yy, true);
+          put_pixel(xx * 2, yy * 2, true);
+          put_pixel(xx * 2, yy * 2 + 1, true);
+          put_pixel(xx * 2 + 1, yy * 2, true);
+          put_pixel(xx * 2 + 1, yy * 2 + 1, true);
         } else {
           // clear the pixel
-          put_pixel(xx, yy, false);
+          put_pixel(xx * 2, yy * 2, false);
+          put_pixel(xx * 2, yy * 2 + 1, false);
+          put_pixel(xx * 2 + 1, yy * 2, false);
+          put_pixel(xx * 2 + 1, yy * 2 + 1, false);
         }
+        //}
       }
     }
   }
+
   return collision;
 }
