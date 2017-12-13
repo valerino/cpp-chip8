@@ -24,6 +24,12 @@ CInput::CInput() : m_keypad{} {
   m_keymap[13]=SDL_GetScancodeFromName(CConfiguration::instance()->get<std::string>("key_d").data());
   m_keymap[14]=SDL_GetScancodeFromName(CConfiguration::instance()->get<std::string>("key_e").data());
   m_keymap[15]=SDL_GetScancodeFromName(CConfiguration::instance()->get<std::string>("key_f").data());
+  for (int i=0; i < m_keymap.size(); i++) {
+    if (m_keymap[i] == SDL_SCANCODE_UNKNOWN || m_keymap[i] == SDL_SCANCODE_P || m_keymap[i] == SDL_SCANCODE_ESCAPE) {
+      throw std::system_error(ENOENT, std::generic_category(),
+                              std::string("configuration 'key_x' error (remember, 'ESC' and 'P' are reserved and can't be mapped"));
+    }
+  }
 }
 
 CInput::~CInput() {}

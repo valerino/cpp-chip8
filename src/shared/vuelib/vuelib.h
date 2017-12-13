@@ -31,4 +31,5 @@
 #include "CUIUtils.h"
 #include "CDynLoad.h"
 #include "CSDLUtils.h"
+#include "CTime.h"
 #endif // PROJECT_VUELIB_H

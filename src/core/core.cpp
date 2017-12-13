@@ -138,8 +138,8 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // default debug level set to only notify
-  CDbg::set_debug_level(DBG_NOTIFY);
+  // default debug level set to error
+  CDbg::set_debug_level(DBG_ERROR);
 
   // load configuration
   CConfiguration::init("core.json","{}");

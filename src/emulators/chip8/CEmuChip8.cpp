@@ -28,7 +28,7 @@ void CEmuChip8::configure() {}
 void CEmuChip8::sdl_poll() {
   // sdl_poll sdl events
   uint8_t *keys;
-  if (CSDLUtils::SDLPollEvents(&keys) != 0) {
+  if (CSDLUtils::sdl_poll_events(&keys) != 0) {
     // must quit
     m_running = false;
   }
@@ -57,7 +57,7 @@ static Uint32 timer_callback(Uint32 interval, void *param) {
 
 int CEmuChip8::start(const char *rom_path) {
   // load configuration, providing a default
-  char* default_cfg="{"
+  std::string default_cfg = "{"
       "    \"display_scale\": 10.0,\n"
       "    \"display_fullscreen\": false,\n"
       "    \"display_draw_color\": \"white\",\n"
@@ -78,11 +78,14 @@ int CEmuChip8::start(const char *rom_path) {
       "    \"key_e\":\"e\",\n"
       "    \"key_f\":\"f\"\n"
       "}";
-  CConfiguration::init("emulators/chip8/chip8.json", default_cfg);
+  CConfiguration::init("emulators/chip8/chip8.json", default_cfg.data());
 
-  // disable debug prints
+  // enable debug prints
   if (CConfiguration::instance()->get<bool>("dbg_verbose")) {
     CDbg::set_debug_level(DBG_VERBOSE);
+  } else {
+    // default debug level set to error
+    CDbg::set_debug_level(DBG_ERROR);
   }
 
   // initialize SDL
@@ -107,6 +110,7 @@ int CEmuChip8::start(const char *rom_path) {
 
   try {
     m_display = new CDisplay(m_memory);
+    m_input = new CInput();
   }
   catch (std::exception e) {
     CDbg::error(e.what());
@@ -114,59 +118,28 @@ int CEmuChip8::start(const char *rom_path) {
     return 1;
   }
 
-  m_input = new CInput();
   m_sound = new CSound();
   m_cpu = new CCpu(m_memory, m_display, m_input, m_sound);
 
   // setup 60hz delay and sound timers
   SDL_TimerID tid = SDL_AddTimer(1000 / 60, timer_callback, m_cpu);
 
+  // get start time
+  uint32_t start_ms = SDL_GetTicks();
   while (m_running) {
     // poll sdl events
     sdl_poll();
 
-    // if the emulator is paused just delay loop unpaused
+    // if the emulator is paused, just loop
     if (m_paused) {
       continue;
     }
 
-    // override default speed ?
-    int hz_override = CConfiguration::instance()->get<int>("speed_hz_override");
-    int hz;
-    if (hz_override) {
-      // custom speed
-      hz = hz_override;
-    }
-    else {
-      // chip8 or super-chip8
-      if (m_cpu->mode() == MODE_CHIP8) {
-        // super chip8 runs at about 600hz
-        hz = 500;
-      }
-      else {
-        // super chip8 runs at about 1200hz
-        hz = 1000;
-      }
-    }
-
-    // execute a cycle
-    float cycle_ms = (1.0 / hz) * 1000;
-    uint32_t start_ms = SDL_GetTicks();
-    uint32_t elapsed = 0;
-    while (1) {
-      res = m_cpu->step();
-      if (res == ERROR_EXIT_OPCODE || res == ERROR_INVALID_OPCODE) {
-        // EXIT instruction found or invalid opcode, next iteration will exit!
-        m_running = false;
-        break;
-      }
-
-      // cap at the desired hz, sleeping for the difference
-      uint32_t end_ms = SDL_GetTicks();
-      elapsed += (end_ms - start_ms);
-      if (elapsed < cycle_ms) {
-        SDL_Delay(cycle_ms - elapsed);
-      }
+    // fetch an instruction
+    res = m_cpu->step();
+    if (res == ERROR_EXIT_OPCODE || res == ERROR_INVALID_OPCODE) {
+      // EXIT instruction found or invalid opcode, next iteration will exit!
+      m_running = false;
       break;
     }
 
@@ -174,12 +147,39 @@ int CEmuChip8::start(const char *rom_path) {
     if (m_cpu->update_display()) {
       m_display->update();
     }
+
+    // get end time
+    uint32_t end_ms = SDL_GetTicks();
+
+    // get cpu speed
+    int hz;
+    if (m_cpu->mode() == MODE_CHIP8) {
+      // super chip8 runs at about 500hz
+      hz = 500;
+    } else {
+      // super chip8 runs at about 1000hz
+      hz = 1000;
+    }
+
+    // how many milliseconds for a cycle
+    uint32_t cycle_ms = 1000/hz;
+
+    // calculate difference, how long this cycle took
+    uint32_t diff = end_ms-start_ms;
+    if (diff < cycle_ms) {
+      // cap at the cpu execution speed
+      uint32_t sleep_time = cycle_ms - diff;
+      SDL_Delay(sleep_time);
+    }
+
+    // update start time with the new time, and go on for the next cycle
+    start_ms = end_ms;
   }
 
-  // kill timer
+  // done, kill timer
   SDL_RemoveTimer(tid);
 
-  // done, release SDL
+  // and release SDL
   SDL_Quit();
   return 0;
 }

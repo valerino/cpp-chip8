@@ -13,6 +13,8 @@
  */
 #define DRAW_COLOR_WHITE 0
 #define DRAW_COLOR_GREEN 1
+#define DRAW_COLOR_RED   2
+#define DRAW_COLOR_BLUE  3
 
 /*
  * display height/width (chip8=64*32, super-chip8=128*64, we always render super-chip8 to implement half-pixel)
@@ -56,7 +58,7 @@ public:
   bool get_pixel(int x, int y);
 
   /**
-   * draw sprite at screen coordinates
+   * draw sprite at screen coordinates (generic)
    * @param s the sprite buffer
    * @param len buffer size
    * @param x
@@ -101,7 +103,18 @@ private:
   SDL_Renderer *m_renderer;
   SDL_Window *m_window;
   CMemory *m_mem;
+  bool m_disable_vertical_wrap;
   std::array<bool, 64 * 128> m_videomem;
+
+  /**
+   * draw sprite at screen coordinates, chip-8 mode (2x every pixel)
+   * @param s the sprite buffer
+   * @param lines how many lines in the sprites (8 or 16, depending on screen mode)
+   * @param x
+   * @param y
+   * @return false if no collision
+   */
+  bool draw_sprite_chip8_mode(const uint8_t *s, int lines, int x, int y);
 };
 
 #endif // PROJECT_CDISPLAY_H

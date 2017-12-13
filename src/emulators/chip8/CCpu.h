@@ -71,8 +71,16 @@ private:
   uint16_t m_PC;                    // PC register
   std::array<uint16_t, 16> m_stack; // the stack
   uint8_t m_SP; // points to top of m_stack
+
+  /* will be true when cpu instruction causes the display to be updated in the next cycle */
   bool m_update_display;
 
+  /* cpu fixes */
+  bool m_fix_fx55_fx65;
+  bool m_fix_8xy6_8xye;
+  bool m_disable_auto_schip8_cpu_fixes;
+
+  /* decoders */
   typedef int (CCpu::*DecoderFunc)(uint16_t);
   std::map<int, DecoderFunc> m_decoders;
   int decode_0(uint16_t addr);

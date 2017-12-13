@@ -22,7 +22,7 @@ public:
    * @param keys on return, if not NULL is the keyboard state returned by SDL_GetKeyboardState()
    * @return != 0 if the app must quit asap
    */
-  static int SDLPollEvents(uint8_t** keys);
+  static int sdl_poll_events(uint8_t **keys);
 };
 
 /**

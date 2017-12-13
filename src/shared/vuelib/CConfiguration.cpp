@@ -54,11 +54,16 @@ void CConfiguration::read(const char *def) {
 }
 
 void CConfiguration::read() {
-  const char *cfg = (const char *)CFile::to_buffer(m_path.c_str());
+  uint32_t size;
+  const char *cfg = (const char *)CFile::to_buffer(m_path.c_str(), &size);
   if (!cfg) {
     throw std::system_error(ENOENT, std::generic_category(), std::string());
   }
 
+  // strip comments
+  //for (int i=0; i < size; i++) {
+  //  if (cfg[i] == '/' and cfg[i[]])
+  //}
   try {
     m_j = json::parse(cfg);
     delete cfg;

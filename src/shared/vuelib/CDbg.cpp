@@ -5,12 +5,9 @@
 #include "CDbg.h"
 #include <string>
 
-int CDbg::m_level = DBG_VERBOSE;
+int CDbg::g_level = DBG_NONE;
 
 void CDbg::print(int level, const char *format, va_list args) {
-  if (level < m_level) {
-    return;
-  }
   char type[32];
   char buf[1024] = {0};
   if (level == DBG_VERBOSE) {
@@ -29,7 +26,7 @@ void CDbg::print(int level, const char *format, va_list args) {
 }
 
 void CDbg::error(const char *format, ...) {
-  if (m_level > DBG_ERROR) {
+  if (g_level < DBG_ERROR) {
     return;
   }
 
@@ -40,7 +37,7 @@ void CDbg::error(const char *format, ...) {
 }
 
 void CDbg::warning(const char *format, ...) {
-  if (m_level > DBG_WARNING) {
+  if (g_level < DBG_WARNING) {
     return;
   }
   va_list args;
@@ -50,7 +47,7 @@ void CDbg::warning(const char *format, ...) {
 }
 
 void CDbg::verbose(const char *format, ...) {
-  if (m_level > DBG_VERBOSE) {
+  if (g_level < DBG_VERBOSE) {
     return;
   }
   va_list args;
@@ -60,11 +57,15 @@ void CDbg::verbose(const char *format, ...) {
 }
 
 void CDbg::notify(const char *format, ...) {
-  if (m_level > DBG_NOTIFY) {
+  if (CDbg::g_level < DBG_NOTIFY) {
     return;
   }
+
   va_list args;
   va_start(args, format);
   CDbg::print(DBG_NOTIFY, format, args);
   va_end(args);
+}
+void CDbg::set_debug_level(int level) {
+  g_level = level;
 }

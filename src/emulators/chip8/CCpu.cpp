@@ -10,7 +10,8 @@ CCpu::CCpu(CMemory *mem, CDisplay *display, CInput *input,
            CSound *sound)
     : m_mem{mem}, m_display{display}, m_input{input},
       m_sound(sound), m_I{0}, m_V{}, m_T{0}, m_D{0}, m_PC{CHIP8_START_ADDRESS},
-      m_stack{}, m_flags{}, m_SP{0}, m_mode{MODE_CHIP8} {
+      m_stack{}, m_flags{}, m_SP{0}, m_mode{MODE_CHIP8}, m_fix_8xy6_8xye{false}, m_fix_fx55_fx65{false},
+      m_disable_auto_schip8_cpu_fixes{false} {
 
   if (m_mem->is_eti660()) {
     // different start address
@@ -19,6 +20,11 @@ CCpu::CCpu(CMemory *mem, CDisplay *display, CInput *input,
 
   // initializes the random number generator
   srand(time(NULL));
+
+  // check for cpu fixes to be applied in chip8 mode
+  m_fix_fx55_fx65 = CConfiguration::instance()->get<bool>("fix_fx55_fx65");
+  m_fix_8xy6_8xye = CConfiguration::instance()->get<bool>("fix_8xy6_8xye");
+  m_disable_auto_schip8_cpu_fixes = CConfiguration::instance()->get<bool>("disable_sc8_autofix");
 
   // map decoders for each opcode category
   m_decoders = {
@@ -74,6 +80,7 @@ int CCpu::decode_0(uint16_t addr) {
     return res;
   }
   if ((addr & 0xf00) >> 4 != 0) {
+    CDbg::error("0NNN can't be executed");
     /*
       0nnn - SYS addr
       Jump to a machine code routine at nnn.
@@ -81,8 +88,7 @@ int CCpu::decode_0(uint16_t addr) {
       This instruction is only used on the old computers on which Chip-8 was
       originally implemented. It is ignored by modern interpreters.
      */
-    m_PC = addr;
-    return 0;
+    res = ERROR_INVALID_OPCODE;
   }
 
   uint8_t kk = addr & 0x0ff;
@@ -144,6 +150,7 @@ int CCpu::decode_0(uint16_t addr) {
     m_display->set_mode(MODE_CHIP8);
     m_mode = MODE_CHIP8;
     m_update_display = true;
+    m_disable_auto_schip8_cpu_fixes = true;
     break;
 
   case 0xff:
@@ -155,6 +162,12 @@ int CCpu::decode_0(uint16_t addr) {
     m_display->set_mode(MODE_SUPERCHIP8);
     m_mode = MODE_SUPERCHIP8;
     m_update_display = true;
+
+    if (m_disable_auto_schip8_cpu_fixes == false) {
+      // automatically enable these for super chip8
+      m_fix_fx55_fx65 = true;
+      m_fix_8xy6_8xye = true;
+    }
     break;
 
   default:
@@ -362,11 +375,11 @@ int CCpu::decode_8(uint16_t addr) {
     /*
       8xy5 - SUB Vx, Vy
       Set Vx = Vx - Vy, set VF = NOT borrow
-      If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from
+      If Vx >= Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from
       Vx, and the results stored in Vx.
      */
     CDbg::verbose("SUB V%x, V%x", x, y);
-    if (m_V[x] > m_V[y]) {
+    if (m_V[x] >= m_V[y]) {
       // set carry flag
       m_V[0xf] = 1;
     } else {
@@ -391,17 +404,24 @@ int CCpu::decode_8(uint16_t addr) {
       // clear carry flag
       m_V[0xf] = 0;
     }
-    m_V[x] = m_V[x] >> 1;
+    // shift_quirk? V[OP_X] >>= 1 : V[OP_X] = V[OP_Y] >> 1;
+    if (!m_fix_8xy6_8xye) {
+      // original interpreter assumes v[y] is shifted, THEN assigned to v[x]
+      m_V[x] = m_V[y] >> 1;
+    }
+    else {
+      m_V[x] = m_V[x] >> 1;
+    }
     break;
   case 7:
     /*
       8xy7 - SUBN Vx, Vy
       Set Vx = Vy - Vx, set VF = NOT borrow
-      If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from
+      If Vy >= Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from
       Vy, and the results stored in Vx.
     */
     CDbg::verbose("SUBN V%x, V%x", x, y);
-    if (m_V[y] > m_V[x]) {
+    if (m_V[y] >= m_V[x]) {
       // set carry flag
       m_V[0xf] = 1;
     } else {
@@ -418,19 +438,25 @@ int CCpu::decode_8(uint16_t addr) {
       If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to
       0. Then Vx is multiplied by 2.
      */
+
     CDbg::verbose("SHL V%x, 1", x);
-    if (m_mode == MODE_SUPERCHIP8) {
-      // seems super-chip8 requires the v[x] register to be shifted!
-      y = x;
-    }
-    if ((m_V[y] << 7) & 1) {
+    // set carry flag according to Vx MSB
+    if (m_V[x] & 0x80) {
       // MSB is set, set carry flag
       m_V[0xf] = 1;
-    } else {
-      // clear carry flag
+    }
+    else {
+      // MSB is unset, clear carry flag
       m_V[0xf] = 0;
     }
-    m_V[x] = m_V[y] << 1;
+
+    if (!m_fix_fx55_fx65) {
+      // original interpreter assumes v[y] is shifted, THEN assigned to v[x]
+      m_V[x] = m_V[y] << 1;
+    }
+    else {
+      m_V[x] = m_V[x] << 1;
+    }
     break;
 
   default:
@@ -525,9 +551,14 @@ int CCpu::decode_D(uint16_t addr) {
 
   // read memory at I
   int bytes_to_fetch = n;
-  if (n == 0 && m_mode == MODE_SUPERCHIP8) {
-    // in super-chip8 mode, a sprite is 32 bytes
-    bytes_to_fetch = 32;
+  if (n == 0) {
+    if (m_mode == MODE_SUPERCHIP8) {
+      // in super-chip8 mode, a sprite is 32 bytes
+      bytes_to_fetch = 32;
+    }
+    else {
+      bytes_to_fetch = 16;
+    }
   }
   std::vector<uint8_t> sprite = m_mem->get_bytes(m_I, bytes_to_fetch);
 
@@ -700,6 +731,11 @@ int CCpu::decode_F(uint16_t addr) {
     for (int i = 0; i <= x; i++) {
       m_mem->put_byte(m_I + i, m_V[i]);
     }
+
+    if (!m_fix_fx55_fx65) {
+      // original interpreter also increments I
+      m_I += ( x + 1 );
+    }
     break;
   case 0x65:
     /*
@@ -713,6 +749,12 @@ int CCpu::decode_F(uint16_t addr) {
     for (int i = 0; i <= x; i++) {
       m_V[i] = m_mem->get_byte(m_I + i);
     }
+
+    if (!m_fix_fx55_fx65) {
+      // original interpreter also increments I
+      m_I += ( x + 1 );
+    }
+
     break;
   case 0x75:
     /*

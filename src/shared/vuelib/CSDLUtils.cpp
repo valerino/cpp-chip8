@@ -4,7 +4,7 @@
 
 #include "CSDLUtils.h"
 
-int CSDLUtils::SDLPollEvents(uint8_t** keys) {
+int CSDLUtils::sdl_poll_events(uint8_t **keys) {
   *keys = NULL;
 
   // sdl_poll sdl events

@@ -10,6 +10,7 @@ class CInput {
 public:
   /**
    * initializes the input subsystem
+   * @throw exception when keymap in configuration file has errors
    */
   CInput();
 

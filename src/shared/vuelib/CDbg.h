@@ -10,11 +10,11 @@
 /**
  * debug levels
  */
-#define DBG_VERBOSE 0
-#define DBG_ERROR 1
+#define DBG_NONE 0
+#define DBG_NOTIFY 1
 #define DBG_WARNING 2
-#define DBG_NOTIFY 3
-#define DBG_NONE 4
+#define DBG_ERROR 3
+#define DBG_VERBOSE 4
 
 /**
  * debug print primitives
@@ -23,14 +23,14 @@ class CDbg {
 
 private:
   static void print(int level, const char *format, va_list args);
-  static int m_level;
+  static int g_level;
 
 public:
   /**
-   * sets the debug level, higher masks lower
+   * sets the debug level, lower level masks higher
    * @param type DBG_VERBOSE, DBG_NOTIFY, DBG_WARNING, DBG_ERROR, DBG_NONE
    */
-  static void set_debug_level(int level) { m_level = level; }
+  static void set_debug_level(int level);
 
   /**
    * prints an error message
