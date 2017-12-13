@@ -15,7 +15,6 @@ public:
   std::string name() override;
   std::string version() override;
   std::string info() override;
-  std::string options() override;
   int start(const char *rom_path) override;
   void stop() override;
   void pause() override;

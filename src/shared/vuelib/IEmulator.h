@@ -33,12 +33,6 @@ public:
   virtual std::string info() = 0;
 
   /**
-   * get emulator additional options string
-   * @return
-   */
-  virtual std::string options() = 0;
-
-  /**
    * start emulator
    * @param rom_path path to a rom file
    * @return 0 on success

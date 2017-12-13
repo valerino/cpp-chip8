@@ -16,7 +16,7 @@ void usage(char **argv) {
   banner();
   CUIUtils::show_message(
       MSG_INFO,
-      "\tusage: %s -e <emu_core> -o [core_options] -r <image>\n"
+      "\tusage: %s -e <emu_core> -r <image>\n"
       "\tusage: %s -l to list available cores\n",
       argv[0], argv[0]);
 }
@@ -80,9 +80,8 @@ int list_cores() {
         char buffer[1024];
         snprintf(
             buffer, sizeof(buffer),
-            "\tcore: %s\n \t\tinfo: %s\n\t\tversion: %s\n\t\toptions: %s\n",
-            e->name().data(), e->info().data(), e->version().data(),
-            e->options().data());
+            "\tcore: %s\n\t\tinfo: %s\n\t\tversion: %s\n",
+            e->name().data(), e->info().data(), e->version().data());
         cores += buffer;
         delete emu;
       }
@@ -112,9 +111,6 @@ int main(int argc, char **argv) {
     case 'e':
       emu_core = optarg;
       break;
-    case 'o':
-      options = optarg;
-      break;
     case 'r':
       game_rom = optarg;
       break;
@@ -122,7 +118,6 @@ int main(int argc, char **argv) {
       // list cores mode
       list_cores();
       return 0;
-      break;
     case '?':
       // print usage
       usage(argv);

@@ -17,8 +17,6 @@ std::string CEmuChip8::info() {
   return std::string("Chip8/Super-Chip8 emulator");
 }
 
-std::string CEmuChip8::options() { return std::string(""); }
-
 void CEmuChip8::stop() { m_running = false; }
 
 void CEmuChip8::pause() { m_paused = !m_paused; }
