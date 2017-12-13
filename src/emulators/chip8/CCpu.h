@@ -1,7 +1,9 @@
-//
-// Created by valerino on 09/11/2017.
-//
-
+/**
+ * @file   CCpu.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements the chip8 CPU (a VM, in reality....)
+ */
 #ifndef PROJECT_CCPU_H
 #define PROJECT_CCPU_H
 
@@ -10,14 +12,11 @@
 #include "CDisplay.h"
 #include "CSound.h"
 #include <CConfiguration.h>
-/*
- * cpu implemented using documentation found here:
- * http://devernay.free.fr/hacks/chip8/C8TECH10.HTM (chip8 only)
- * https://github.com/trapexit/chip-8_documentation/blob/master/Misc/SCHIP-8%20v1.1.txt
- * http://www.pong-story.com/chip8/ (download the chip8 emulator, docs are in the .zip)
- */
 
+/** @brief returned by step() on invalid opcode */
 #define ERROR_INVALID_OPCODE -2
+
+/** @brief returned by step() when EXIT opcode is executed by the cpu */
 #define ERROR_EXIT_OPCODE -1
 
 // implements chip8/super-chip8 vm
@@ -31,6 +30,10 @@ public:
    * @param sound represents emulated sound hw
    */
   CCpu(CMemory *mem, CDisplay *display, CInput *input, CSound *sound);
+
+  /**
+   * destructor
+   */
   ~CCpu();
 
   /**
@@ -53,7 +56,7 @@ public:
   uint8_t mode() { return m_mode; }
 
   /**
-   * update the delay and sound timers
+   * update the delay and sound timers (both must tick at 60hz)
    */
   void updateTimers();
 
@@ -63,24 +66,10 @@ private:
   CInput *m_input;
   CDisplay *m_display;
   CSound *m_sound;
-  uint16_t m_I;                     // I register
-  std::array<uint8_t, 16> m_V;      // V0-VF
-  std::array<uint8_t, 16> m_flags;  // RPL user flags (super-chip8 only)
-  uint8_t m_T;                      // timer register
-  uint8_t m_D;                      // delay register
-  uint16_t m_PC;                    // PC register
-  std::array<uint16_t, 16> m_stack; // the stack
-  uint8_t m_SP; // points to top of m_stack
-
-  /* will be true when cpu instruction causes the display to be updated in the next cycle */
   bool m_update_display;
-
-  /* cpu fixes */
   bool m_fix_fx55_fx65;
   bool m_fix_8xy6_8xye;
   bool m_disable_auto_schip8_cpu_fixes;
-
-  /* decoders */
   typedef int (CCpu::*DecoderFunc)(uint16_t);
   std::map<int, DecoderFunc> m_decoders;
   int decode_0(uint16_t addr);
@@ -99,6 +88,23 @@ private:
   int decode_D(uint16_t addr);
   int decode_E(uint16_t addr);
   int decode_F(uint16_t addr);
+
+  /** @brief I address register */
+  uint16_t m_I;
+  /** @brief 16 8bit registers, register VF is the carry flag */
+  std::array<uint8_t, 16> m_V;
+  /** @brief super-chip8 only, 16 8bit flags affected by the FX75, FX85 instructions */
+  std::array<uint8_t, 16> m_flags;
+  /** @brief timer register, must tick at 60hz */
+  uint8_t m_T;
+  /** @brief delay register, must tick at 60hz */
+  uint8_t m_D;
+  /** @brief the program counter register */
+  uint16_t m_PC;
+  /** @brief 16 positions 16bit stack */
+  std::array<uint16_t, 16> m_stack; // the stack
+  /** @brief stack register, points to the top of stack */
+  uint8_t m_SP;
 };
 
 #endif // PROJECT_CCPU_H

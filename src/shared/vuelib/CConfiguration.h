@@ -1,7 +1,9 @@
-//
-// Created by valerino on 10/11/2017.
-//
-
+/**
+ * @file   CConfiguration.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements JSON configuration serializer/deserializer, part of vuelib
+ */
 #ifndef PROJECT_CCONFIGURATION_H
 #define PROJECT_CCONFIGURATION_H
 
@@ -38,8 +40,8 @@ public:
   /**
    * initializes the configuration
    * @param path path to the configuration file, will be created if not existing
-   * @throws std::system_error
-   * @throws json::exception
+   * @throws std::system_error if the default configuration can't be written (when no configuration exists)
+   * @throws json::exception if the JSON is invalid
    * @return CConfiguration* singleton
    */
   static CConfiguration* init (const char* path, const char* def = NULL);
@@ -91,6 +93,9 @@ public:
    */
   const char *path() { return m_path.c_str(); }
 
+  /**
+   * destructor
+   */
   ~CConfiguration();
 
 private:

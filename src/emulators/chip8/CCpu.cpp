@@ -1,6 +1,9 @@
-//
-// Created by valerino on 09/11/2017.
-//
+/**
+ * @file   CCpu.cpp
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements the chip8 CPU (a VM, in reality....)
+ */
 
 #include <vuelib.h>
 #include "CCpu.h"
@@ -14,7 +17,7 @@ CCpu::CCpu(CMemory *mem, CDisplay *display, CInput *input,
       m_disable_auto_schip8_cpu_fixes{false} {
 
   if (m_mem->is_eti660()) {
-    // different start address
+    // eti-660 has a different start address
     m_PC = ETI660_START_ADDRESS;
   }
 
@@ -24,7 +27,9 @@ CCpu::CCpu(CMemory *mem, CDisplay *display, CInput *input,
   // check for cpu fixes to be applied in chip8 mode
   m_fix_fx55_fx65 = CConfiguration::instance()->get<bool>("fix_fx55_fx65");
   m_fix_8xy6_8xye = CConfiguration::instance()->get<bool>("fix_8xy6_8xye");
-  m_disable_auto_schip8_cpu_fixes = CConfiguration::instance()->get<bool>("disable_sc8_autofix");
+
+  // if this is disabled (defaault), the above fixes are always applied in super-chip8 mode
+  m_disable_auto_schip8_cpu_fixes = CConfiguration::instance()->get<bool>("fix_sc8_disable_auto");
 
   // map decoders for each opcode category
   m_decoders = {
@@ -640,7 +645,7 @@ int CCpu::decode_F(uint16_t addr) {
       stored in Vx.
      */
     CDbg::verbose("LD V%x, K", x);
-    idx = m_input->is_key_pressed();
+    idx = m_input->get_key_pressed();
     if (idx == -1) {
       // will keep the same PC
       res = 0;

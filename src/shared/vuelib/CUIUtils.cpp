@@ -1,7 +1,9 @@
-//
-// Created by valerino on 19/11/2017.
-//
-
+/**
+ * @file   CUIUtils.cpp
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  user interface utilities, part of vuelib
+ */
 #include <stdio.h>
 #include "CUIUtils.h"
 

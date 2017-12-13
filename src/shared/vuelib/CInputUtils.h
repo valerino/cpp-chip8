@@ -1,18 +1,23 @@
-//
-// Created by valerino on 13/11/2017.
-//
+/**
+ * @file   CSDLUtils.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  input related utilities, part of vuelib
+ */
 
 #ifndef PROJECT_CSDLUTILS_H
 #define PROJECT_CSDLUTILS_H
 
-#include <SDL2/SDL.h>
+#include <stdint.h>
 
 /**
- * struct t be filled by SDLPollEvents()
+ * struct t be filled by sdl_poll_events()
  */
 typedef struct _sdl_keys {
-  int key; /* one of the SDL_* scancodes */
-  bool pressed; /* true if pressed */
+  /** @brief one of the SDL_* scancodes */
+  int key;
+  /** @brief key state */
+  bool pressed;
 } sdl_keys;
 
 class CSDLUtils {
@@ -24,10 +29,5 @@ public:
    */
   static int sdl_poll_events(uint8_t **keys);
 };
-
-/**
- * convert screen coordinates to flat buffer offset
- */
-#define SCREEN_TO_FLAT_OFFSET(__x__, __y__, __w__) ((__y__ * __w__) + __x__)
 
 #endif // PROJECT_CSDLUTILS_H

@@ -1,6 +1,9 @@
-//
-// Created by valerino on 09/11/2017.
-//
+/**
+ * @file   CDbg.cpp
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements debugprint and debug helpers, part of vuelib
+ */
 
 #include "CDbg.h"
 #include <string>

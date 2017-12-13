@@ -1,6 +1,9 @@
-//
-// Created by valerino on 10/11/2017.
-//
+/**
+ * @file   CConfiguration.cpp
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements JSON configuration serializer/deserializer, part of vuelib
+ */
 
 #include <string>
 #include <fstream>
@@ -8,6 +11,9 @@
 #include "CConfiguration.h"
 #include "CDbg.h"
 
+/**
+ * static singleton
+ */
 CConfiguration* CConfiguration::g_instance = NULL;
 
 CConfiguration::CConfiguration(const char *path, const char *def) {

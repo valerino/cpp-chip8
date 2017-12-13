@@ -1,6 +1,9 @@
-//
-// Created by valerino on 09/11/2017.
-//
+/**
+ * @file   CInput.cpp
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements the chip8 input subsystem (keypad)
+ */
 
 #include <vuelib.h>
 #include "CInput.h"
@@ -27,7 +30,7 @@ CInput::CInput() : m_keypad{} {
   for (int i=0; i < m_keymap.size(); i++) {
     if (m_keymap[i] == SDL_SCANCODE_UNKNOWN || m_keymap[i] == SDL_SCANCODE_P || m_keymap[i] == SDL_SCANCODE_ESCAPE) {
       throw std::system_error(ENOENT, std::generic_category(),
-                              std::string("configuration 'key_x' error (remember, 'ESC' and 'P' are reserved and can't be mapped"));
+                              std::string("configuration 'key_x' error (remember, 'ESC' and 'P' are reserved and can't be mapped!)"));
     }
   }
 }
@@ -37,15 +40,21 @@ CInput::~CInput() {}
 bool CInput::is_key_pressed(int idx) {
   // read keyboard state
   const Uint8 *state = SDL_GetKeyboardState(NULL);
+
+  // return state of the given key
   return state[m_keymap[idx]];
 }
 
-int CInput::is_key_pressed() {
+int CInput::get_key_pressed() {
+  // loop through all the keypad
   for (int i = 0; i < 16; i++) {
     bool pressed = is_key_pressed(i);
     if (pressed) {
+      // this key has been pressed
       return i;
     }
   }
+
+  // no key has been pressed
   return -1;
 }

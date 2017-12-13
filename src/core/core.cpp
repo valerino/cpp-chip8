@@ -1,5 +1,10 @@
+/**
+ * @file   core.cpp
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  vue core loader, implements loading of emulator cores (dynamic libraries)
+ */
 #include <vuelib.h>
-#include <dlfcn.h>
 
 /**
  * print banner
@@ -145,7 +150,7 @@ int main(int argc, char **argv) {
   IEmulator *emu;
   CDynModule *mod = load_emu(emu_core, &emu);
   if (emu && mod) {
-    // will run until quitting
+    // will run until quit
     int res = emu->start(game_rom);
     delete emu;
     delete mod;

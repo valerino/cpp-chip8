@@ -1,11 +1,14 @@
-//
-// Created by valerino on 12/11/2017.
-//
-
+/**
+ * @file   CFile.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  file I/O primitives, part of vuelib
+ */
 #ifndef PROJECT_CFILE_H
 #define PROJECT_CFILE_H
 
 #include <stdint.h>
+#include <errno.h>
 #include <tinydir.h>
 
 class CFile {

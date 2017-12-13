@@ -1,6 +1,9 @@
-//
-// Created by valerino on 09/11/2017.
-//
+/**
+ * @file   CDisplay.cpp
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements the chip8 display subsystem
+ */
 
 #include <vuelib.h>
 #include "CDisplay.h"

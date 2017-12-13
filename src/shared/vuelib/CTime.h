@@ -1,14 +1,16 @@
-//
-// Created by valerino on 12/12/2017.
-//
-
+/**
+ * @file   CTime.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  time utilities, part of vuelib
+ */
 #ifndef PROJECT_CTIME_H
 #define PROJECT_CTIME_H
 
 #include <stdint.h>
 class CTime {
   /**
-   * get current time in nanoseconds, since unix epoch
+   * get current time in nanoseconds, since unix epoch (1/1/1970)
    * @return
    */
 public:

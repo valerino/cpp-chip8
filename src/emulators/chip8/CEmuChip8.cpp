@@ -1,6 +1,9 @@
-//
-// Created by valerino on 09/11/2017.
-//
+/**
+ * @file   CEmuChip8.cpp
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements the chip8 emulator
+ */
 
 #include <vuelib.h>
 #include "CDisplay.h"
@@ -9,9 +12,9 @@
 #include "defs.h"
 #include "CEmuChip8.h"
 
-std::string CEmuChip8::name() { return std::string("vue-chip8"); }
+std::string CEmuChip8::name() { return std::string(EMULATOR_NAME); }
 
-std::string CEmuChip8::version() { return std::string("v1.0"); }
+std::string CEmuChip8::version() { return std::string(EMULATOR_VERSION); }
 
 std::string CEmuChip8::info() {
   return std::string("Chip8/Super-Chip8 emulator");
@@ -23,13 +26,19 @@ void CEmuChip8::pause() { m_paused = !m_paused; }
 
 void CEmuChip8::configure() {}
 
+/**
+ * poll SDL events and check if reserved keys (to exit and pause emulator) has been pressed
+ */
 void CEmuChip8::sdl_poll() {
-  // sdl_poll sdl events
+  // poll system events with SDL
   uint8_t *keys;
   if (CSDLUtils::sdl_poll_events(&keys) != 0) {
     // must quit
     m_running = false;
+    return;
   }
+
+  // check if reserved keys (esc and p) are pressed
   if (keys) {
     if (keys[SDL_SCANCODE_ESCAPE]) {
       // abort emulation
@@ -43,8 +52,8 @@ void CEmuChip8::sdl_poll() {
 
 /**
  * ticks at 60hz, updates sound and delay timer
- * @param interval
- * @param param
+ * @param interval unused
+ * @param param CCpu instance
  * @return
  */
 static Uint32 timer_callback(Uint32 interval, void *param) {
@@ -78,8 +87,8 @@ int CEmuChip8::start(const char *rom_path) {
       "}";
   CConfiguration::init("emulators/chip8/chip8.json", default_cfg.data());
 
-  // enable debug prints
   if (CConfiguration::instance()->get<bool>("dbg_verbose")) {
+    // enable verbose debug prints
     CDbg::set_debug_level(DBG_VERBOSE);
   } else {
     // default debug level set to error
@@ -102,28 +111,29 @@ int CEmuChip8::start(const char *rom_path) {
     SDL_Quit();
     return 1;
   }
-
-  // set running
-  m_running = true;
-
   try {
     m_display = new CDisplay(m_memory);
     m_input = new CInput();
   }
   catch (std::exception e) {
-    CDbg::error(e.what());
+    CUIUtils::show_toast_message(MSG_ERROR, e.what());
     SDL_Quit();
     return 1;
   }
-
   m_sound = new CSound();
   m_cpu = new CCpu(m_memory, m_display, m_input, m_sound);
 
   // setup 60hz delay and sound timers
   SDL_TimerID tid = SDL_AddTimer(1000 / 60, timer_callback, m_cpu);
 
+  // target speed
+  int hz=CConfiguration::instance()->get<int>("cpu_target_hz");
+
   // get start time
   uint32_t start_ms = SDL_GetTicks();
+
+  // game loop
+  m_running = true;
   while (m_running) {
     // poll sdl events
     sdl_poll();
@@ -149,21 +159,22 @@ int CEmuChip8::start(const char *rom_path) {
     // get end time
     uint32_t end_ms = SDL_GetTicks();
 
-    // get cpu speed
-    int hz;
-    if (m_cpu->mode() == MODE_CHIP8) {
-      // super chip8 runs at about 500hz
-      hz = 500;
-    } else {
-      // super chip8 runs at about 1000hz
-      hz = 1000;
+    if (hz == 0) {
+      // use predefined target cpu speed
+      if (m_cpu->mode() == MODE_CHIP8) {
+        // super chip8 runs at about 500hz
+        hz = 500;
+      } else {
+        // super chip8 runs at about 1000hz
+        hz = 1000;
+      }
     }
 
     // how many milliseconds for a cycle
     uint32_t cycle_ms = 1000/hz;
 
     // calculate difference, how long this cycle took
-    uint32_t diff = end_ms-start_ms;
+    uint32_t diff = end_ms - start_ms;
     if (diff < cycle_ms) {
       // cap at the cpu execution speed
       uint32_t sleep_time = cycle_ms - diff;
@@ -185,7 +196,6 @@ int CEmuChip8::start(const char *rom_path) {
 CEmuChip8::CEmuChip8()
     : m_cpu(NULL), m_memory(NULL), m_input(NULL), m_display(NULL),
       m_sound(NULL) {
-  // CDbg::set_debug_level(DBG_NONE);
 }
 
 CEmuChip8::~CEmuChip8() {
@@ -197,5 +207,6 @@ CEmuChip8::~CEmuChip8() {
 }
 
 extern "C" EXPORT IEmulator *get_emulator_interface() {
+  // returns the IEmulator interface to control this core
   return new CEmuChip8();
 }

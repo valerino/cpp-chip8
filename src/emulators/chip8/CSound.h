@@ -1,7 +1,9 @@
-//
-// Created by valerino on 13/11/2017.
-//
-
+/**
+ * @file   CSound.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements the chip-8 sound subsystem
+ */
 #ifndef PROJECT_CSOUND_H
 #define PROJECT_CSOUND_H
 
@@ -24,7 +26,7 @@ public:
   virtual ~CSound();
 
   /**
-   * emit beep
+   * beeps until disabled
    * @param enable true to start beeping, false to stop
    */
   void beep(bool enable);

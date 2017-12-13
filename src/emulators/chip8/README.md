@@ -30,6 +30,9 @@ Here's a sample *chip8.json* configuration to be put in *bin/emulators/chip8* fo
     // emulate eti-660 (changes the rom start address), default is false
     "mode_eti660": false,
 
+    // override speed, default is for chip8 to run at about 500hz and super-chip8 to run at about 1000hz
+    "cpu_target_hz": 1000,
+    
     // some games breaks if vertical wrap is enabled (default)
     "fix_disable_vertical_wrap":false,
 
@@ -40,7 +43,7 @@ Here's a sample *chip8.json* configuration to be put in *bin/emulators/chip8* fo
     "fix_8xy6_8xye":false,
     
     // the cpu instruction fixes are automatically enabled on super-chip8 unless this is specified (default is false)
-    "disable_sc8_autofix": false,
+    "fix_sc8_disable_auto": false,
 
     // scale the display (10x is the default)
     "display_scale": 10.0,
@@ -82,7 +85,7 @@ Some (standard chip8) games doesn't work at all or partially with the standard C
 
 This emulator attempts to provide settings to overcome these limitations.
 
->> the cpu instruction fixes *fix_fx55_fx65* and *fix_8xy6_8xye* are automatically applied for Super-Chip8 games, unless *disable_sc8_autofix* is specified
+>> the cpu instruction fixes *fix_fx55_fx65* and *fix_8xy6_8xye* are automatically applied for Super-Chip8 games, unless *fix_sc8_disable_auto* is specified
 
 ### Known games which needs fix_disable_vertical_wrap = true
 * Mines
@@ -94,6 +97,11 @@ This emulator attempts to provide settings to overcome these limitations.
 ### Known games which needs  fix_8xy6_8xye = true
 * Space Invaders
 * V-Brix
+
+## References
+* http://devernay.free.fr/hacks/chip8/C8TECH10.HTM (chip8 only)
+* https://github.com/trapexit/chip-8_documentation/blob/master/Misc/SCHIP-8%20v1.1.txt
+* http://www.pong-story.com/chip8/ (download the chip8 emulator, docs are in the .zip)
 
 ## TODO
 Should be completed unless bugs are found :)

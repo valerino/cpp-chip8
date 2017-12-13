@@ -1,25 +1,28 @@
-//
-// Created by valerino on 13/11/2017.
-//
+/**
+ * @file   CSound.cpp
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements the chip-8 sound subsystem
+ */
 
-#include "CSound.h"
 #include <vuelib.h>
+#include "CSound.h"
 
 /**
- * This is a private structure used for holding information about audio.
- * I need to create the structure becuase the feeding function for audio
- * in SDL only allows one single parameter to be provided via user data.
- * This little trick lets me pass more than one variable.
+ * waveform data
  */
 struct audiodata_t {
+  /** @brief sample position, must be initialized to 0 */
   float tone_pos;
+  /** @brief must be initialized with the waveform start seed */
   float tone_inc;
 };
 
 /**
- * This is the function that generates the beep noise heard in the emulator.
- * It generates RAW PCM values that are written to the stream. This is fast
- * and has no dependencies on external files.
+ * audio callback which generates the beep (raw PCM 44100hz)
+ * @param udata initialized with waveform start seed
+ * @param stream the sample output buffer
+ * @param len size of the sample output buffer
  */
 void feed(void *udata, Uint8 *stream, int len) {
   struct audiodata_t *audio = (struct audiodata_t *)udata;
@@ -32,13 +35,13 @@ void feed(void *udata, Uint8 *stream, int len) {
 CSound::CSound() :
   m_device{0},m_spec{NULL} {
 
-  /* Initialize user data structure. */
+  // initializes waveform data for raw audio PCM generation
   struct audiodata_t *audio =
       (struct audiodata_t *)CMem::alloc(sizeof(struct audiodata_t));
   audio->tone_pos = 0;
   audio->tone_inc = 2 * 3.14159 * 1000 / 44100;
 
-  /* Set up the audiospec data structure required by SDL. */
+  // set up the audiospec data structure required by SDL
   m_spec = (SDL_AudioSpec *)CMem::alloc(sizeof(SDL_AudioSpec));
   m_spec->freq = 44100;
   m_spec->format = AUDIO_U8;
@@ -46,23 +49,27 @@ CSound::CSound() :
   m_spec->samples = 4096;
   m_spec->callback = feed;
   m_spec->userdata = audio;
+
+  // open default device
   m_device =
       SDL_OpenAudioDevice(NULL, 0, m_spec, m_spec, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
-  int r = 9;
 }
 
 CSound::~CSound() {
   CMem::free(m_spec->userdata);
   CMem::free(m_spec);
   if (m_device) {
+    // close device
     SDL_CloseAudioDevice(m_device);
   }
 }
 
 void CSound::beep(bool enable) {
   if (enable) {
+    // let the beep run
     SDL_PauseAudioDevice(m_device,0);
   } else {
+    // mute the beep
     SDL_PauseAudioDevice(m_device,1);
   }
 }

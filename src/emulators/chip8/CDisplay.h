@@ -1,25 +1,30 @@
-//
-// Created by valerino on 09/11/2017.
-//
+/**
+ * @file   CDisplay.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements the chip8 display subsystem
+ */
 
 #ifndef PROJECT_CDISPLAY_H
 #define PROJECT_CDISPLAY_H
 
 #include "CMemory.h"
-#include <CConfiguration.h>
 
-/*
- * define different draw colors
- */
+/** @brief screen will be drawn in white */
 #define DRAW_COLOR_WHITE 0
+/** @brief screen will be drawn in green */
 #define DRAW_COLOR_GREEN 1
+/** @brief screen will be drawn in red */
 #define DRAW_COLOR_RED   2
+/** @brief screen will be drawn in blue */
 #define DRAW_COLOR_BLUE  3
 
-/*
- * display height/width (chip8=64*32, super-chip8=128*64, we always render super-chip8 to implement half-pixel)
- */
+/** @brief fixed screen width, we render in full super-chip8 mode always to easily implement half-pixel chip8 mode
+ * (standard chip8 width = 64) */
 #define CHIP8_WIDTH 128
+
+/** @brief fixed screen height, we render in full super-chip8 mode always to easily implement half-pixel chip8 mode
+ * (standard chip8 height = 32) */
 #define CHIP8_HEIGHT 64
 
 /**
@@ -30,13 +35,13 @@ public:
   /**
    * initializes the display
    * @param mem represents emulated memory
-   * @throws if SDL fails
+   * @throws runtime error if SDL fails
    */
   CDisplay(CMemory *mem);
   ~CDisplay();
 
   /**
-   * update the display
+   * updates the display
    */
   void update();
 
@@ -58,7 +63,8 @@ public:
   bool get_pixel(int x, int y);
 
   /**
-   * draw sprite at screen coordinates (generic)
+   * draws a sprite at screen coordinates. sprite is drawn in by XORING pixels on screen,
+   * so if we set ON a pixel which was previously ON, this means a collision happened
    * @param s the sprite buffer
    * @param len buffer size
    * @param x
@@ -68,18 +74,18 @@ public:
   bool draw_sprite(const uint8_t *s, int len, int x, int y);
 
   /**
-   * scroll down N lines
+   * scroll down n lines
    * @param n lines to scroll down
    */
   void scroll_down(int n);
 
   /**
-   * scroll 4 pixel left
+   * scroll 4 pixel left (2 pixels in chip-8 mode)
    */
   void scroll_left();
 
   /**
-   * scroll 4 pixel right
+   * scroll 4 pixel right (2 pixels in chip-8 mode)
    */
   void scroll_right();
 

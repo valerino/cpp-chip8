@@ -8,4 +8,4 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BASE_DIR})
 
 add_executable(core ${SOURCE_FILES})
 
-target_link_libraries(core vuelib)
+target_link_libraries(core vuelib SDL2)

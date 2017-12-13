@@ -1,13 +1,11 @@
-//
-// Created by valerino on 10/11/2017.
-//
-
+/**
+ * @file   vuelib.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  include this on top of every .cpp to use vuelib, usually avoiding including anything else
+ */
 #ifndef PROJECT_VUELIB_H
 #define PROJECT_VUELIB_H
-
-#ifdef WIN32
-#include <windows.h>
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,9 +25,10 @@
 #include "CConfiguration.h"
 #include "CFile.h"
 #include "CMem.h"
-#include "CSDLUtils.h"
+#include "CInputUtils.h"
 #include "CUIUtils.h"
-#include "CDynLoad.h"
-#include "CSDLUtils.h"
+#include "CDynModule.h"
+#include "CInputUtils.h"
+#include "CGfxUtils.h"
 #include "CTime.h"
 #endif // PROJECT_VUELIB_H

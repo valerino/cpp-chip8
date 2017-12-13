@@ -1,7 +1,9 @@
-//
-// Created by valerino on 09/11/2017.
-//
-
+/**
+ * @file   CInput.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements the chip8 input subsystem (keypad)
+ */
 #ifndef PROJECT_CINPUT_H
 #define PROJECT_CINPUT_H
 
@@ -14,18 +16,21 @@ public:
    */
   CInput();
 
+  /**
+   * destructor
+   */
   ~CInput();
 
   /**
-   * get a key
-   * @return the pressed key index, or -1 if no key has been pressed
+   * get a key in the emulated keypad
+   * @return the pressed key index (0-15), or -1 if no key has been pressed
    */
-  int is_key_pressed();
+  int get_key_pressed();
 
   /**
    * check if the given key is pressed
    * @param idx index (0-15)
-   * @return true if pressed
+   * @return
    */
   bool is_key_pressed(int idx);
 

@@ -1,15 +1,12 @@
-//
-// Created by valerino on 19/11/2017.
-//
-
+/**
+ * @file   CDynModule.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  dynamic library loader used to load cores, part of vuelib
+ */
 #ifndef PROJECT_CDYNLOAD_H
 #define PROJECT_CDYNLOAD_H
 
-#ifdef WIN32
-#include <windows.h>
-#endif
-
-#include <dlfcn.h>
 #include "IEmulator.h"
 
 /**
@@ -26,25 +23,22 @@ public:
   CDynModule(const char* path);
 
   /**
-   * get exported symbol
-   * @param function_name symbol name
-   * @return pointer to symbol
-   */
-  void* getExportedFunction(const char* function_name);
-
-  /**
-   * get the IEmulator* interface. must be freed with delete
+   * get the IEmulator* interface, must be freed with delete
    * @return
    */
   IEmulator* getIEmulator();
 
   /**
-   * get module path
+   * get loaded module path
    * @return
    */
   std::string path() { return std::string(m_path); }
 
+  /**
+   * destructor
+   */
   virtual ~CDynModule();
+
 private:
   void* m_module;
   char m_path[260];

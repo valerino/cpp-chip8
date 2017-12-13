@@ -1,29 +1,29 @@
-//
-// Created by valerino on 09/11/2017.
-//
-
+/**
+ * @file   CDbg.h
+ * @Author valerino
+ * @date   13/12/2017
+ * @brief  implements debugprint and debug helpers, part of vuelib
+ */
 #ifndef PROJECT_CDBG_H
 #define PROJECT_CDBG_H
 
 #include <stdarg.h>
 
-/**
- * debug levels
- */
+/** @brief for set_debug_level(), no debug messages are displayed */
 #define DBG_NONE 0
+/** @brief for set_debug_level(), display notify messages only */
 #define DBG_NOTIFY 1
+/** @brief for set_debug_level(), display warning and notify messages */
 #define DBG_WARNING 2
+/** @brief for set_debug_level(), display warning, error and notify messages */
 #define DBG_ERROR 3
+/** @brief for set_debug_level(), display all messages */
 #define DBG_VERBOSE 4
 
 /**
  * debug print primitives
  */
 class CDbg {
-
-private:
-  static void print(int level, const char *format, va_list args);
-  static int g_level;
 
 public:
   /**
@@ -59,6 +59,10 @@ public:
    * @param ... variadic
    */
   static void notify(const char *format, ...);
+
+private:
+  static void print(int level, const char *format, va_list args);
+  static int g_level;
 };
 
 #endif // PROJECT_CDBG_H
