@@ -1,3 +1,7 @@
+# ---------------------------------------
+# ABANDONED (only chip8/superchip8 works)
+# ---------------------------------------
+
 # VUE - valerino's universal emulator
 Yet another multi-emulator!
 
